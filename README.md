@@ -171,7 +171,7 @@ If any of them fail, the change is not ready. `npm run test` in particular check
 ## Publishing it
 
 Pushing to `master` builds the site and publishes it to GitHub Pages at
-**https://dbeihl.github.io/priced-catalog/**. `.github/workflows/deploy.yml` runs the lint, the tests, and the typechecking build first, so a broken change never reaches the live page.
+**https://dozer1986.github.io/priced-catalog/**. `.github/workflows/deploy.yml` runs the lint, the tests, and the typechecking build first, so a broken change never reaches the live page.
 
 Two things have to be true in the repository's own settings before the first deploy succeeds, and neither can be set from a file in the repo:
 

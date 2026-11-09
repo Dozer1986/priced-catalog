@@ -1,6 +1,6 @@
 name: Deploy site to Pages
 
-# Publishes to https://dbeihl.github.io/priced-catalog/. The base path that
+# Publishes to https://dozer1986.github.io/priced-catalog/. The base path that
 # makes that subdirectory work is set in vite.config.ts; a different home
 # (a custom domain, the root of a user site) needs VITE_BASE_PATH — see README.
 #

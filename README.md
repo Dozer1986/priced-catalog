@@ -2,6 +2,8 @@
 
 A website that publishes your prices next to the hours behind them and what the going rate is for the same job. No database, no logins, nothing collected about anyone who visits.
 
+Started from [dbeihl/priced-catalog](https://github.com/dbeihl/priced-catalog); this copy is maintained at Dozer1986/priced-catalog. Live site: https://dozer1986.github.io/priced-catalog/
+
 Everything you would want to change lives in two files:
 
 - `src/site.config.ts` — your name, service area, email, the visit minimum, and the page description, web address, and link-preview image. The "Request a walkthrough" buttons stay hidden until the email no longer starts with `TODO_`. Any other value still starting with `TODO_` is left off the page. The browser-tab titles in `index.html` and `sources.html` repeat the name, so change them there too.

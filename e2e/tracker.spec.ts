@@ -276,3 +276,18 @@ test('tracker: time added the next morning defaults to that day', async ({ page 
   await page.getByRole('button', { name: 'Add time' }).click();
   await expect(page.getByRole('row', { name: /Second day/ })).toContainText('2026-03-03');
 });
+
+test('tracker: payment terms changed in another tab survive a settings save here', async ({ page, context }) => {
+  await page.goto('/priced-catalog/tracker.html#/settings');
+  const other = await context.newPage();
+  await other.goto('/priced-catalog/tracker.html#/settings');
+  await other.getByLabel('Payment Terms').fill('Net 15. Check or Zelle.');
+  await other.getByRole('button', { name: 'Save business settings' }).click();
+  await expect(page.getByLabel('Payment Terms')).toHaveValue('Net 15. Check or Zelle.');
+  await page.getByLabel(/Tax Label/).fill('IN sales tax');
+  await page.getByRole('button', { name: 'Save business settings' }).click();
+  await expect(other.getByLabel(/Tax Label/)).toHaveValue('IN sales tax');
+  await page.reload();
+  await expect(page.getByLabel(/Tax Label/)).toHaveValue('IN sales tax');
+  await expect(page.getByLabel('Payment Terms')).toHaveValue('Net 15. Check or Zelle.');
+});

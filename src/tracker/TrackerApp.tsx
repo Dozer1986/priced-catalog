@@ -120,7 +120,7 @@ export function TrackerApp() {
         )}
 
         {route.view === 'settings' && (
-          <SettingsScreen settings={settings} syncStatus={syncStatus} />
+          <SettingsScreen key={settings._rev} settings={settings} syncStatus={syncStatus} />
         )}
         </>)}
       </main>

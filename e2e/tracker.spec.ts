@@ -252,6 +252,7 @@ test('tracker: a price typed as $1,200.00 bills $1,200.00, and a price in words 
   await expect(sheet).toContainText('$1,200.00');
   await expect(sheet).toContainText('$1,384.00'); // $100 labor + $1,200 + 7% tax on the equipment
   await expect(sheet).toContainText('Labor, 1 hour');
+  await expect(sheet).not.toContainText('1 hours');
 });
 
 test('tracker: a rate changed in another tab survives editing the job here', async ({ page, context }) => {
@@ -291,4 +292,98 @@ test('tracker: payment terms changed in another tab survive a settings save here
   await page.reload();
   await expect(page.getByLabel(/Tax Label/)).toHaveValue('IN sales tax');
   await expect(page.getByLabel('Payment Terms')).toHaveValue('Net 15. Check or Zelle.');
+});
+
+test('tracker: on a phone the time entries fit the screen without sideways scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await newJobWithHour(page, 'Garage opener');
+  const table = page.getByRole('region', { name: 'Time entries' }).locator('table');
+  const sideways = () =>
+    table.evaluate((t) => {
+      const box = t.parentElement as HTMLElement;
+      return box.scrollWidth - box.clientWidth;
+    });
+  expect(await sideways()).toBe(0);
+  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  expect(await sideways()).toBe(0);
+});
+
+test('tracker: an invoice with a few lines prints on one page', async ({ page }) => {
+  await newJobWithHour(page, 'Faucet swap');
+  await page.getByLabel(/Hours/).fill('1:15');
+  await page.getByLabel('Task description').fill('Second visit');
+  await page.getByRole('button', { name: 'Add time' }).click();
+  await expect(page.getByRole('region', { name: 'Time entries' })).toContainText('Second visit');
+  await page.getByRole('link', { name: 'Create invoice' }).click();
+  await page.getByRole('button', { name: '+ Add Equipment' }).click();
+  await page.getByRole('button', { name: '+ Add Materials' }).click();
+  for (const [i, [item, price]] of [['Moen kitchen faucet', '189.00'], ['Supply lines', '12.50']].entries()) {
+    await page.getByPlaceholder('Description').nth(i).fill(item);
+    await page.getByPlaceholder('0.00').nth(i).fill(price);
+  }
+  await page.getByLabel('One-sentence summary').fill('Replaced the kitchen faucet.');
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+  await expect(page.locator('.invoice-sheet')).toContainText('Amount due');
+  const pdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
+  expect(pdf.toString('latin1').match(/\/Type\s*\/Page(?![s\w])/g)).toHaveLength(1);
+});
+
+test('tracker: edits made on two offline devices are both kept after they sync', async ({ page }) => {
+  await newJobWithHour(page, 'Porch light');
+  // This device changes the hours...
+  await page.getByRole('row', { name: /First hour/ }).getByRole('button', { name: 'Edit' }).click();
+  await page.getByPlaceholder('Hours e.g. 2.5').fill('1:30');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('row', { name: /First hour/ })).toContainText('1.5 hrs');
+  // ...while another device renamed the task from the same version. Sync stores that edit as a
+  // conflicting revision, which is what this writes (new_edits: false keeps the given revision).
+  const dbModule = '/priced-catalog/src/tracker/db.ts'; // the app's own module, served by Vite
+  const conflicts = () =>
+    page.evaluate(async (url) => {
+      const { db } = await import(url);
+      const { rows } = await db.allDocs({ startkey: 'entry:', endkey: 'entry:￰' });
+      const doc = await db.get(rows[0].id, { conflicts: true });
+      return doc._conflicts?.length ?? 0;
+    }, dbModule);
+  await page.evaluate(async (url) => {
+    const { db } = await import(url);
+    const { rows } = await db.allDocs({ startkey: 'entry:', endkey: 'entry:￰' });
+    const mine = await db.get(rows[0].id, { revs: true });
+    const { start, ids } = mine._revisions;
+    const parent = await db.get(mine._id, { rev: `${start - 1}-${ids[1]}` });
+    const theirs = {
+      ...parent,
+      task: 'Wired the porch light',
+      updatedAt: new Date(Date.now() + 60_000).toISOString(),
+      _rev: `${start}-${'f'.repeat(32)}`, // sorts above this device's revision, so CouchDB shows theirs
+      _revisions: { start, ids: ['f'.repeat(32), ...ids.slice(1)] },
+    };
+    await db.bulkDocs([theirs], { new_edits: false });
+  }, dbModule);
+  await expect(page.getByRole('row', { name: /Wired the porch light/ })).toContainText('1.5 hrs');
+  await expect.poll(conflicts).toBe(0);
+});
+
+test('tracker: changing only the date of a timer entry keeps its exact minutes and task', async ({ page }) => {
+  // Offline edits merge field by field, so the form must not rewrite fields the user left alone.
+  await newJobWithHour(page, 'Cabinet hang');
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await page.locator('[data-job-card]').getByRole('button', { name: 'Start' }).click();
+  const timers = page.getByRole('region', { name: 'Running timers' });
+  await timers.getByPlaceholder('What are you working on?').pressSequentially('Hung the cabinet '); // phone keyboards leave a space
+  await timers.getByRole('button', { name: 'Stop' }).click();
+  await page.getByRole('link', { name: 'Cabinet hang' }).first().click();
+  const stored = () =>
+    page.evaluate(async (url) => {
+      const { db } = await import(url);
+      const { rows } = await db.allDocs({ include_docs: true, startkey: 'entry:', endkey: 'entry:￰' });
+      const { date, task, minutes } = rows.find((r: { doc: { start?: string } }) => r.doc.start).doc;
+      return { date, task, minutes };
+    }, '/priced-catalog/src/tracker/db.ts');
+  const before = await stored();
+  expect(Number.isInteger(before.minutes)).toBe(false); // a timer's minutes carry seconds
+  await page.getByRole('row', { name: /Hung the cabinet/ }).getByRole('button', { name: 'Edit', exact: true }).click();
+  await page.locator('tr').filter({ has: page.getByPlaceholder('Hours e.g. 2.5') }).locator('input[type="date"]').fill('2026-01-02');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect.poll(stored).toEqual({ ...before, date: '2026-01-02' });
 });

@@ -7,6 +7,7 @@ import {
   nextInvoiceNumber,
   formatMoney,
   getLocalDateString,
+  hoursLabel,
   parsePriceCents,
 } from '../billing';
 
@@ -470,7 +471,7 @@ export function InvoiceNewScreen({
             <span className="fig">{formatMoney(totals.materialsCents)}</span>
           </div>
           <div className="flex justify-between text-sm text-ink-2">
-            <span>Labor, {totals.laborHours} hours</span>
+            <span>Labor, {hoursLabel(totals.laborHours)}</span>
             <span className="fig">{formatMoney(totals.laborCents)}</span>
           </div>
           <div className="flex justify-between text-sm border-t border-rule pt-2 font-medium text-ink">

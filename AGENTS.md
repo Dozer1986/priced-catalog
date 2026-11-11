@@ -7,6 +7,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Market-band sources are maintained in `SOURCES.md` and published through `src/data/sources.ts`; each `marketBand.sourceKey` names its registry row exactly, and `null` keeps a citation unlinked until its source is confirmed.
 - Page metadata is configured in `src/site.config.ts` and applied through `src/site-metadata.ts`; `TODO_` values intentionally produce no metadata tag.
 - Tracker code lives in `src/tracker/`; money is integer cents. The `events` dependency is for PouchDB (nothing imports it directly): a hand-written shim without `newListener` leaves the sync status stuck.
+- Every tracker write goes through `saveDoc` (`src/tracker/db.ts`), which stamps `updatedAt`; `src/tracker/merge.ts` uses it to merge offline edits from two devices field by field, so a form must save only the fields the user changed.
 
 ## Maintaining this file
 

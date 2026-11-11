@@ -166,11 +166,13 @@ export function JobScreen({
       return;
     }
 
+    // Fields left as shown keep their stored value (a timer's exact minutes, the task as typed), so
+    // merging offline edits from another device doesn't count them as changed here.
     await saveDoc<EntryDoc>(entry._id, (e) => e && {
       ...e,
       date: editDate || e.date,
-      task: editTask.trim(),
-      minutes: parsedMins,
+      task: editTask.trim() === e.task.trim() ? e.task : editTask.trim(),
+      minutes: parsedMins === Math.round(e.minutes ?? 0) ? e.minutes : parsedMins,
     });
     setEditingEntryId(null);
     setEditError('');
@@ -563,7 +565,7 @@ export function JobScreen({
         </form>
       </section>
 
-      {/* Entries table */}
+      {/* Entries table; on phones each row stacks as a card instead of scrolling sideways */}
       <section aria-label="Time entries" className="mt-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-bold text-ink">Time Entries ({jobEntries.length})</h2>
@@ -582,8 +584,8 @@ export function JobScreen({
           </div>
         ) : (
           <div className="overflow-x-auto rounded border border-rule bg-field">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-rule bg-paper text-xs uppercase tracking-wider text-ink-2">
+            <table className="w-full text-left text-sm max-sm:block">
+              <thead className="border-b border-rule bg-paper text-xs uppercase tracking-wider text-ink-2 max-sm:hidden">
                 <tr>
                   <th className="px-4 py-2.5">Date</th>
                   <th className="px-4 py-2.5">Task</th>
@@ -593,7 +595,7 @@ export function JobScreen({
                   <th className="px-4 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-rule">
+              <tbody className="divide-y divide-rule max-sm:block">
                 {jobEntries.map((entry) => {
                   const isRunning = Boolean(entry.start && !entry.end);
                   const isBilled = Boolean(entry.invoiceId);
@@ -602,7 +604,7 @@ export function JobScreen({
 
                   if (isEditingThis) {
                     return (
-                      <tr key={entry._id} className="bg-field">
+                      <tr key={entry._id} className="bg-field max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-2 max-sm:p-3 max-sm:[&>td]:p-0">
                         <td className="px-4 py-2">
                           <input
                             type="date"
@@ -611,7 +613,7 @@ export function JobScreen({
                             className="fig rounded border border-rule bg-paper px-2 py-1 text-xs text-ink"
                           />
                         </td>
-                        <td className="px-4 py-2">
+                        <td className="px-4 py-2 max-sm:order-first max-sm:w-full">
                           <input
                             type="text"
                             value={editTask}
@@ -629,7 +631,7 @@ export function JobScreen({
                           />
                           {editError && <div className="text-[10px] text-red-400">{editError}</div>}
                         </td>
-                        <td className="px-4 py-2" colSpan={2}>
+                        <td className="px-4 py-2 max-sm:ml-auto" colSpan={2}>
                           <div className="flex justify-end gap-1.5">
                             <button
                               type="button"
@@ -652,11 +654,11 @@ export function JobScreen({
                   }
 
                   return (
-                    <tr key={entry._id} className="hover:bg-paper/40 transition-colors">
+                    <tr key={entry._id} className="hover:bg-paper/40 transition-colors max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-3 max-sm:gap-y-1 max-sm:px-4 max-sm:py-3 max-sm:[&>td]:p-0">
                       <td className="fig px-4 py-3 whitespace-nowrap text-xs text-ink-2">
                         {entry.date}
                       </td>
-                      <td className="px-4 py-3 text-ink font-medium">
+                      <td className="px-4 py-3 text-ink font-medium max-sm:order-first max-sm:w-full">
                         {entry.task || (isRunning ? 'In progress…' : '—')}
                       </td>
                       <td className="fig px-4 py-3 whitespace-nowrap text-xs text-ink-2">
@@ -683,7 +685,7 @@ export function JobScreen({
                           <span className="text-ink-2">Unbilled</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
+                      <td className="px-4 py-3 whitespace-nowrap text-right text-xs max-sm:ml-auto">
                         {isBilled ? (
                           <span className="text-ink-2 italic">Locked</span>
                         ) : isRunning ? (

@@ -1,6 +1,7 @@
 export interface SettingsDoc {
   _id: 'settings';
   _rev?: string;
+  updatedAt?: string; // ISO time of the last save; the later edit wins when offline edits collide
   type: 'settings';
   businessName: string;
   defaultRate: number; // e.g. 100 ($/hr)
@@ -12,6 +13,7 @@ export interface SettingsDoc {
 export interface JobDoc {
   _id: `job:${string}`;
   _rev?: string;
+  updatedAt?: string;
   type: 'job';
   customer: string;
   address: string;
@@ -24,6 +26,7 @@ export interface JobDoc {
 export interface EntryDoc {
   _id: `entry:${string}`;
   _rev?: string;
+  updatedAt?: string;
   type: 'entry';
   jobId: string; // references job._id
   date: string; // LOCAL date 'YYYY-MM-DD'
@@ -61,6 +64,7 @@ export interface InvoiceTotals {
 export interface InvoiceDoc {
   _id: `invoice:${string}`;
   _rev?: string;
+  updatedAt?: string;
   type: 'invoice';
   jobId: string;
   number: string; // e.g. 'INV-2026-002'

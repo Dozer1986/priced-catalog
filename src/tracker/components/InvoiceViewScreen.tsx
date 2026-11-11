@@ -1,6 +1,6 @@
 import type { InvoiceDoc, EntryDoc } from '../types';
 import { removeDoc, saveDoc } from '../db';
-import { formatMoney } from '../billing';
+import { formatMoney, hoursLabel } from '../billing';
 import '../invoice.css';
 
 interface InvoiceViewScreenProps {
@@ -174,7 +174,7 @@ export function InvoiceViewScreen({
           </div>
           <div className="hours">
             <table>
-              <caption>Labor, {invoice.totals.laborHours} hours</caption>
+              <caption>Labor, {hoursLabel(invoice.totals.laborHours)}</caption>
               <thead>
                 <tr>
                   <th>Task</th>
@@ -202,7 +202,7 @@ export function InvoiceViewScreen({
               <tfoot>
                 <tr>
                   <td colSpan={2}>
-                    {invoice.totals.laborHours} hours @ {formatMoney(invoice.rateCents)}
+                    {hoursLabel(invoice.totals.laborHours)} @ {formatMoney(invoice.rateCents)}
                   </td>
                   <td className="hrs num">{formatMoney(invoice.totals.laborCents)}</td>
                 </tr>
@@ -226,7 +226,7 @@ export function InvoiceViewScreen({
             <span className="num">{formatMoney(invoice.totals.materialsCents)}</span>
           </div>
           <div className="row">
-            <span>Labor, {invoice.totals.laborHours} hours</span>
+            <span>Labor, {hoursLabel(invoice.totals.laborHours)}</span>
             <span className="num">{formatMoney(invoice.totals.laborCents)}</span>
           </div>
           <div className="row">

@@ -59,7 +59,7 @@ export function JobScreen({
   const [jobFormError, setJobFormError] = useState('');
 
   // Add Time Form State
-  const [timeDate, setTimeDate] = useState(() => getLocalDateString());
+  const [timeDate, setTimeDate] = useState('');
   const [timeHours, setTimeHours] = useState('');
   const [timeTask, setTimeTask] = useState('');
   const [timeError, setTimeError] = useState('');
@@ -330,7 +330,16 @@ export function JobScreen({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsEditingJob(!isEditingJob)}
+            onClick={() => {
+              if (!isEditingJob) {
+                setCustomer(existingJob.customer);
+                setAddress(existingJob.address);
+                setName(existingJob.name);
+                setRate(existingJob.rate);
+                setStatus(existingJob.status);
+              }
+              setIsEditingJob(!isEditingJob);
+            }}
             className="rounded border border-rule px-3 py-1.5 text-xs font-medium text-ink hover:border-ink-2"
           >
             {isEditingJob ? 'Cancel edit' : 'Edit job'}
@@ -509,7 +518,7 @@ export function JobScreen({
               id="time-date"
               type="date"
               required
-              value={timeDate}
+              value={timeDate || getLocalDateString()}
               onChange={(e) => setTimeDate(e.target.value)}
               className="fig mt-1 w-full rounded border border-rule bg-paper px-2.5 py-1.5 text-sm text-ink focus:border-mark focus:outline-none"
             />

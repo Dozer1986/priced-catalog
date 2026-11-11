@@ -253,3 +253,26 @@ test('tracker: a price typed as $1,200.00 bills $1,200.00, and a price in words 
   await expect(sheet).toContainText('$1,384.00'); // $100 labor + $1,200 + 7% tax on the equipment
   await expect(sheet).toContainText('Labor, 1 hour');
 });
+
+test('tracker: a rate changed in another tab survives editing the job here', async ({ page, context }) => {
+  await newJobWithHour(page, 'Deck stairs');
+  const jobUrl = page.url();
+  const other = await context.newPage();
+  await other.goto(jobUrl);
+  await other.getByRole('button', { name: 'Edit job' }).click();
+  await other.getByLabel('Rate ($/hr)').fill('120');
+  await other.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByText('$120/hr')).toBeVisible();
+  await page.getByRole('button', { name: 'Edit job' }).click();
+  await expect(page.getByLabel('Rate ($/hr)')).toHaveValue('120');
+});
+
+test('tracker: time added the next morning defaults to that day', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-03-02T23:58:00') });
+  await newJobWithHour(page, 'Gutter guard');
+  await page.clock.setSystemTime(new Date('2026-03-03T08:00:00'));
+  await page.getByLabel(/Hours/).fill('2');
+  await page.getByLabel('Task description').fill('Second day');
+  await page.getByRole('button', { name: 'Add time' }).click();
+  await expect(page.getByRole('row', { name: /Second day/ })).toContainText('2026-03-03');
+});

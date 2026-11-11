@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SettingsDoc, SyncCredentials } from '../types';
 import {
   saveDoc,
@@ -28,6 +28,15 @@ export function SettingsScreen({ settings, syncStatus }: SettingsScreenProps) {
     settings.paymentTerms || 'Payment due on receipt. Cash, check, Venmo or Zelle.'
   );
   const [settingsSaved, setSettingsSaved] = useState(false);
+
+  // settings is a new object on every reload, so refill only when the saved doc changes
+  useEffect(() => {
+    setBusinessName(settings.businessName || 'KAMOTec');
+    setDefaultRate(settings.defaultRate || 100);
+    setTaxPercent(settings.taxRate !== undefined ? String(Math.round(settings.taxRate * 10000) / 100) : '7');
+    setTaxLabel(settings.taxLabel || 'Indiana sales tax');
+    setPaymentTerms(settings.paymentTerms || 'Payment due on receipt. Cash, check, Venmo or Zelle.');
+  }, [settings._rev]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync Form State
   const storedCreds = getStoredSyncCredentials();

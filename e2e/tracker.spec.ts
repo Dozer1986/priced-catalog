@@ -286,6 +286,7 @@ test('tracker: payment terms changed in another tab survive a settings save here
   await expect(page.getByLabel('Payment Terms')).toHaveValue('Net 15. Check or Zelle.');
   await page.getByLabel(/Tax Label/).fill('IN sales tax');
   await page.getByRole('button', { name: 'Save business settings' }).click();
+  await expect(page.getByText('Settings saved successfully.')).toBeVisible();
   await expect(other.getByLabel(/Tax Label/)).toHaveValue('IN sales tax');
   await page.reload();
   await expect(page.getByLabel(/Tax Label/)).toHaveValue('IN sales tax');

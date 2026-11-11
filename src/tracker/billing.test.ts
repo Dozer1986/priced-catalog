@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   billableHours,
   parseHours,
+  parsePriceCents,
   invoiceTotals,
   nextInvoiceNumber,
   formatMoney,
@@ -72,6 +73,22 @@ describe('billing pure functions', () => {
       expect(nextInvoiceNumber([], '2026-11-10')).toBe('INV-2026-002');
       expect(nextInvoiceNumber(['INV-2026-002', 'INV-2026-007'], '2026-11-10')).toBe('INV-2026-008');
       expect(nextInvoiceNumber([], '2027-01-03')).toBe('INV-2027-001');
+    });
+  });
+
+  describe('parsePriceCents', () => {
+    it('reads plain, dollar-sign and comma prices', () => {
+      expect(parsePriceCents('45')).toBe(4500);
+      expect(parsePriceCents(' 19.99 ')).toBe(1999);
+      expect(parsePriceCents('$1,200.00')).toBe(120000);
+      expect(parsePriceCents('')).toBe(0);
+    });
+
+    it('rejects anything that is not a price', () => {
+      expect(parsePriceCents('twelve hundred')).toBeNull();
+      expect(parsePriceCents('-5')).toBeNull();
+      expect(parsePriceCents('1.2.3')).toBeNull();
+      expect(parsePriceCents('12,50')).toBeNull();
     });
   });
 

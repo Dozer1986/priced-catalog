@@ -174,7 +174,7 @@ export function InvoiceViewScreen({
           </div>
           <div className="hours">
             <table>
-              <caption>Installation, {invoice.totals.laborHours} hours</caption>
+              <caption>Labor, {invoice.totals.laborHours} hours</caption>
               <thead>
                 <tr>
                   <th>Task</th>
@@ -235,7 +235,7 @@ export function InvoiceViewScreen({
           </div>
           <div className="row">
             <span>
-              {invoice.taxLabel}, {(invoice.taxRate * 100).toFixed(0)}% on equipment and materials (labor not taxed)
+              {invoice.taxLabel}, {Math.round(invoice.taxRate * 10000) / 100}% on equipment and materials (labor not taxed)
             </span>
             <span className="num">{formatMoney(invoice.totals.taxCents)}</span>
           </div>

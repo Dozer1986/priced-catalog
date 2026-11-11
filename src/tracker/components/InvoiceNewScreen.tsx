@@ -7,6 +7,7 @@ import {
   nextInvoiceNumber,
   formatMoney,
   getLocalDateString,
+  parsePriceCents,
 } from '../billing';
 
 interface InvoiceNewScreenProps {
@@ -84,7 +85,7 @@ export function InvoiceNewScreen({
       kind: item.kind,
       description: item.description.trim(),
       qty: Number(item.qty) || 0,
-      unitPriceCents: Math.round((parseFloat(item.unitPriceStr) || 0) * 100),
+      unitPriceCents: parsePriceCents(item.unitPriceStr) ?? 0,
     }));
 
     return invoiceTotals(laborHours, rateCents, items, settings.taxRate);
@@ -144,17 +145,21 @@ export function InvoiceNewScreen({
       setError('A one-sentence summary is required.');
       return;
     }
+    if (lineItems.some((item) => parsePriceCents(item.unitPriceStr) === null)) {
+      setError('Enter each price as a number, like 45 or 1,200.00.');
+      return;
+    }
 
     if (saving.current) return;
     saving.current = true;
     const newInvoiceId = `invoice:${crypto.randomUUID()}` as const;
     const formattedItems: InvoiceLineItem[] = lineItems
-      .filter((item) => item.description.trim() || parseFloat(item.unitPriceStr) > 0)
+      .filter((item) => item.description.trim() || (parsePriceCents(item.unitPriceStr) ?? 0) > 0)
       .map((item) => ({
         kind: item.kind,
         description: item.description.trim(),
         qty: Number(item.qty) || 0,
-        unitPriceCents: Math.round((parseFloat(item.unitPriceStr) || 0) * 100),
+        unitPriceCents: parsePriceCents(item.unitPriceStr) ?? 0,
       }));
 
     const invoiceDoc: InvoiceDoc = {
@@ -474,7 +479,7 @@ export function InvoiceNewScreen({
           </div>
           <div className="flex justify-between text-sm text-ink-2">
             <span>
-              {settings.taxLabel}, {(settings.taxRate * 100).toFixed(0)}% on equipment and materials (labor not taxed)
+              {settings.taxLabel}, {Math.round(settings.taxRate * 10000) / 100}% on equipment and materials (labor not taxed)
             </span>
             <span className="fig">{formatMoney(totals.taxCents)}</span>
           </div>

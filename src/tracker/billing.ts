@@ -40,6 +40,17 @@ export function parseHours(text: string): number | null {
 }
 
 /**
+ * Parses a price typed as "45", "19.99" or "$1,200.00" into cents. Blank is $0; anything else is null.
+ */
+export function parsePriceCents(text: string): number | null {
+  const clean = text.trim().replace(/^\$\s*/, '');
+  if (!clean) return 0;
+  // Commas only as thousands separators, so "12,50" is an error instead of $1,250.
+  if (!/^(\d+|\d{1,3}(,\d{3})+)(\.\d+)?$/.test(clean)) return null;
+  return Math.round(parseFloat(clean.replace(/,/g, '')) * 100);
+}
+
+/**
  * Calculates invoice financial totals in integer cents.
  * Labor is never taxed.
  */

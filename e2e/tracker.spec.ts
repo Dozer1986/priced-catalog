@@ -207,7 +207,9 @@ test('tracker: a second quick Save makes no duplicate invoice, and a reload keep
   await page.getByRole('button', { name: 'Add time' }).click();
   await page.getByRole('link', { name: 'Create invoice' }).click();
   await page.reload();
-  await expect(page.getByLabel('Invoice Number')).toHaveValue('INV-2026-003');
+  // INV-2026-001 was issued before the app, so 2026 starts at 002; later years start at 001.
+  const year = new Date().getFullYear();
+  await expect(page.getByLabel('Invoice Number')).toHaveValue(year === 2026 ? 'INV-2026-003' : `INV-${year}-002`);
   await expect(page.getByRole('checkbox')).toBeChecked();
 });
 
@@ -223,4 +225,31 @@ test('tracker: editing only the task keeps the real minutes', async ({ page }) =
   await editRow.locator('input[type="text"]').first().fill('Wired the dryer outlet');
   await editRow.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('row', { name: /Wired the dryer outlet/ })).toContainText('52m');
+});
+
+test('tracker: a double tap on Start starts one timer', async ({ page }) => {
+  await newJobWithHour(page, 'Sink drain');
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await page.locator('[data-job-card]').getByRole('button', { name: 'Start' }).dblclick();
+  const stops = page.getByRole('region', { name: 'Running timers' }).getByRole('button', { name: 'Stop' });
+  await expect(stops).toHaveCount(1);
+  await page.waitForTimeout(500);
+  await expect(stops).toHaveCount(1);
+});
+
+test('tracker: a price typed as $1,200.00 bills $1,200.00, and a price in words stops the save', async ({ page }) => {
+  await newJobWithHour(page, 'Water heater');
+  await page.getByRole('link', { name: 'Create invoice' }).click();
+  await page.getByRole('button', { name: '+ Add Equipment' }).click();
+  await page.getByPlaceholder('Description').fill('50 gal water heater');
+  await page.getByPlaceholder('0.00').fill('twelve hundred');
+  await page.getByLabel('One-sentence summary').fill('Replaced the water heater.');
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+  await expect(page.getByText('Enter each price as a number')).toBeVisible();
+  await page.getByPlaceholder('0.00').fill('$1,200.00');
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+  const sheet = page.locator('.invoice-sheet');
+  await expect(sheet).toContainText('$1,200.00');
+  await expect(sheet).toContainText('$1,384.00'); // $100 labor + $1,200 + 7% tax on the equipment
+  await expect(sheet).toContainText('Labor, 1 hour');
 });

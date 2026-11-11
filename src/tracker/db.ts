@@ -190,11 +190,18 @@ export async function removeDoc(id: string): Promise<void> {
   }
 }
 
+let lastStart: Promise<void> = Promise.resolve();
+
 /**
  * Starts a timer on a job unless one is already running there; stops timers on other jobs.
- * Reads entries from the database, not from React state, so a quick second tap sees the first.
+ * Starts run one at a time and read the database, not React state, so a fast double tap makes one timer.
  */
-export async function startJobTimer(jobId: string): Promise<void> {
+export function startJobTimer(jobId: string): Promise<void> {
+  lastStart = lastStart.catch(() => undefined).then(() => startTimerNow(jobId));
+  return lastStart;
+}
+
+async function startTimerNow(jobId: string): Promise<void> {
   const { rows } = await db.allDocs({ include_docs: true, startkey: 'entry:', endkey: 'entry:\ufff0' });
   const running = rows.map((r) => r.doc as EntryDoc).filter((e) => e.start && !e.end);
   if (running.some((e) => e.jobId === jobId)) return;

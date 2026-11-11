@@ -89,12 +89,22 @@ export function restartSync(): void {
     const sync = db.sync(remote, { live: true, retry: true });
     activeSync = sync;
 
+    // Sync's own 'paused' event drops the error, so keep the pull side's to tell offline from
+    // idle. Registered before sync.on('paused') so it runs first.
+    let pullError: unknown = null;
+    (sync as unknown as { pull: PouchDB.Replication.Replication<TrackerDoc> }).pull.on(
+      'paused',
+      (err) => {
+        pullError = err;
+      },
+    );
+
     sync.on('active', () => {
       setSyncStatus('Syncing…');
     });
 
-    sync.on('paused', (err) => {
-      if (err) {
+    sync.on('paused', () => {
+      if (pullError) {
         setSyncStatus('Offline — saved on this device');
       } else {
         const timeStr = new Date().toLocaleTimeString('en-US', {
@@ -131,21 +141,36 @@ if (typeof window !== 'undefined' && getStoredSyncCredentials()) {
   restartSync();
 }
 
+// A phone app sits in the background for hours; sync as soon as it is opened again instead of
+// waiting out PouchDB's retry back-off, which grows to 10 minutes.
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && getStoredSyncCredentials()) restartSync();
+});
+
 /**
- * Puts a document with 1 retry on 409 revision conflict.
+ * Writes `change(current)`. On a conflict (409: sync or another tap saved first) it reads the
+ * doc again and re-applies `change`, so a save never overwrites a newer edit.
+ * `change` returns undefined to skip the write (the doc is gone, or nothing to do).
  */
-export async function putWithRetry(doc: TrackerDoc): Promise<void> {
-  try {
-    await db.put(doc);
-  } catch (err: unknown) {
-    if ((err as { status?: number }).status === 409) {
-      const fresh = await db.get(doc._id);
-      await db.put({
-        ...doc,
-        _rev: fresh._rev,
-      } as TrackerDoc);
-    } else {
-      throw err;
+export async function saveDoc<T extends TrackerDoc>(
+  id: string,
+  change: (current: T | undefined) => T | undefined,
+): Promise<void> {
+  for (;;) {
+    const current = await db.get(id).then(
+      (doc) => doc as T,
+      (err: { status?: number }) => {
+        if (err.status === 404) return undefined;
+        throw err;
+      },
+    );
+    const next = change(current);
+    if (!next) return;
+    try {
+      await db.put({ ...next, _rev: current?._rev } as TrackerDoc);
+      return;
+    } catch (err: unknown) {
+      if ((err as { status?: number }).status !== 409) throw err;
     }
   }
 }
@@ -164,30 +189,16 @@ export async function removeDoc(id: string): Promise<void> {
 }
 
 /**
- * Stops all currently running entries.
+ * Starts a timer on a job unless one is already running there; stops timers on other jobs.
+ * Reads entries from the database, not from React state, so a quick second tap sees the first.
  */
-export async function stopRunningEntries(entries: EntryDoc[]): Promise<void> {
-  const running = entries.filter((e) => e.start && !e.end);
+export async function startJobTimer(jobId: string): Promise<void> {
+  const { rows } = await db.allDocs({ include_docs: true, startkey: 'entry:', endkey: 'entry:\ufff0' });
+  const running = rows.map((r) => r.doc as EntryDoc).filter((e) => e.start && !e.end);
+  if (running.some((e) => e.jobId === jobId)) return;
+  for (const e of running) await stopEntryTimer(e._id);
   const now = new Date();
-  for (const r of running) {
-    const startMs = new Date(r.start!).getTime();
-    const endMs = now.getTime();
-    const minutes = Math.max(0, (endMs - startMs) / 60000);
-    await putWithRetry({
-      ...r,
-      end: now.toISOString(),
-      minutes,
-    });
-  }
-}
-
-/**
- * Starts a timer on a job, stopping any other running entries first.
- */
-export async function startJobTimer(jobId: string, currentEntries: EntryDoc[]): Promise<void> {
-  await stopRunningEntries(currentEntries);
-  const now = new Date();
-  const newEntry: EntryDoc = {
+  const entry: EntryDoc = {
     _id: `entry:${crypto.randomUUID()}`,
     type: 'entry',
     jobId,
@@ -195,44 +206,42 @@ export async function startJobTimer(jobId: string, currentEntries: EntryDoc[]): 
     task: '',
     start: now.toISOString(),
   };
-  await putWithRetry(newEntry);
+  await saveDoc(entry._id, () => entry);
 }
 
 /**
- * Stops a specific running timer entry.
+ * Stops a running timer. `task` is text typed on the timer card that may not be saved yet.
  */
-export async function stopEntryTimer(entry: EntryDoc): Promise<void> {
-  const now = new Date();
-  const startMs = new Date(entry.start ?? now.toISOString()).getTime();
-  const endMs = now.getTime();
-  const minutes = Math.max(0, (endMs - startMs) / 60000);
-  await putWithRetry({
-    ...entry,
-    end: now.toISOString(),
-    minutes,
-  });
+export async function stopEntryTimer(id: string, task?: string): Promise<void> {
+  const end = new Date();
+  await saveDoc<EntryDoc>(id, (e) =>
+    e?.start && !e.end
+      ? {
+          ...e,
+          task: task ?? e.task,
+          end: end.toISOString(),
+          minutes: Math.max(0, (end.getTime() - Date.parse(e.start)) / 60000),
+        }
+      : undefined,
+  );
 }
 
 /**
  * Hook to consume live database state and sync status.
  */
 export function useTrackerData() {
-  const [docs, setDocs] = useState<TrackerDoc[]>([]);
+  const [docs, setDocs] = useState<TrackerDoc[] | null>(null); // null until the first load
   const [syncStatus, setStatusState] = useState<string>(currentSyncStatus);
 
   const reload = useCallback(async () => {
-    try {
-      const res = await db.allDocs({ include_docs: true });
-      const loaded: TrackerDoc[] = [];
-      for (const row of res.rows) {
-        if (row.doc && 'type' in row.doc) {
-          loaded.push(row.doc as unknown as TrackerDoc);
-        }
+    const res = await db.allDocs({ include_docs: true });
+    const loaded: TrackerDoc[] = [];
+    for (const row of res.rows) {
+      if (row.doc && 'type' in row.doc) {
+        loaded.push(row.doc as unknown as TrackerDoc);
       }
-      setDocs(loaded);
-    } catch {
-      // ignore
     }
+    setDocs(loaded);
   }, []);
 
   useEffect(() => {
@@ -247,18 +256,18 @@ export function useTrackerData() {
     };
   }, [reload]);
 
-  const settingsDoc = (docs.find((d) => d._id === 'settings' && d.type === 'settings') as SettingsDoc | undefined) ?? DEFAULT_SETTINGS;
-  const jobs = docs.filter((d): d is JobDoc => d.type === 'job');
-  const entries = docs.filter((d): d is EntryDoc => d.type === 'entry');
-  const invoices = docs.filter((d): d is InvoiceDoc => d.type === 'invoice');
+  const all = docs ?? [];
+  const settingsDoc = (all.find((d) => d._id === 'settings' && d.type === 'settings') as SettingsDoc | undefined) ?? DEFAULT_SETTINGS;
+  const jobs = all.filter((d): d is JobDoc => d.type === 'job');
+  const entries = all.filter((d): d is EntryDoc => d.type === 'entry');
+  const invoices = all.filter((d): d is InvoiceDoc => d.type === 'invoice');
 
   return {
-    docs,
+    loaded: docs !== null,
     settings: settingsDoc,
     jobs,
     entries,
     invoices,
     syncStatus,
-    reload,
   };
 }

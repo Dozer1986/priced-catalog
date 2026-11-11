@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 test('tracker: Aaron tracks hours and creates an invoice', async ({ page }) => {
   const errors: string[] = [];
@@ -159,4 +159,54 @@ test('tracker: customer autofill, timer switching, and invoice deletion', async 
   await expect(page.getByRole('heading', { name: 'Invoices' })).toBeVisible();
 
   expect(errors).toEqual([]);
+});
+
+async function newJobWithHour(page: Page, name: string) {
+  await page.goto('/priced-catalog/tracker.html');
+  await page.getByRole('link', { name: '+ New job' }).click();
+  await page.getByLabel('Customer name').fill('Sam Sample');
+  await page.getByLabel('Job name').fill(name);
+  await page.getByRole('button', { name: 'Create job' }).click();
+  await page.getByLabel(/Hours/).fill('1');
+  await page.getByLabel('Task description').fill('First hour');
+  await page.getByRole('button', { name: 'Add time' }).click();
+  await expect(page.getByRole('region', { name: 'Time entries' })).toContainText('First hour');
+}
+
+test('tracker: a task typed on a running timer keeps every letter after Stop', async ({ page }) => {
+  await newJobWithHour(page, 'Outlet fix');
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await page.locator('[data-job-card]').getByRole('button', { name: 'Start' }).click();
+  const timers = page.getByRole('region', { name: 'Running timers' });
+  const task = timers.getByPlaceholder('What are you working on?');
+  await task.pressSequentially('Replaced two outlets');
+  await expect(task).toHaveValue('Replaced two outlets');
+  await timers.getByRole('button', { name: 'Stop' }).click();
+  await page.getByRole('link', { name: 'Outlet fix' }).first().click();
+  await expect(page.getByRole('region', { name: 'Time entries' })).toContainText('Replaced two outlets');
+});
+
+test('tracker: a second quick Save makes no duplicate invoice, and a reload keeps the next number', async ({ page }) => {
+  await newJobWithHour(page, 'Light swap');
+  await page.getByRole('link', { name: 'Create invoice' }).click();
+  await page.getByLabel('One-sentence summary').fill('Swapped the hall light.');
+  // A second tap that lands while the first save is still writing.
+  await page.locator('form').evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+    form.requestSubmit();
+  });
+  await expect(page.getByText('Amount due')).toBeVisible();
+  await page.getByRole('link', { name: 'Invoices', exact: true }).click();
+  await page.waitForTimeout(1000); // let a second save, if any, land
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await page.getByRole('link', { name: 'Light swap' }).first().click();
+  await page.getByLabel(/Hours/).fill('2');
+  await page.getByLabel('Task description').fill('Second visit');
+  await page.getByRole('button', { name: 'Add time' }).click();
+  await page.getByRole('link', { name: 'Create invoice' }).click();
+  await page.reload();
+  await expect(page.getByLabel('Invoice Number')).toHaveValue('INV-2026-003');
+  await expect(page.getByRole('checkbox')).toBeChecked();
 });

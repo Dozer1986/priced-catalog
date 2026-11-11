@@ -1,6 +1,6 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig } from 'vitest/config';
+import type { Plugin } from 'vite';
 import { resolve } from 'node:path';
-import { createHash } from 'node:crypto';
 import react from '@vitejs/plugin-react';
 
 function trackerServiceWorkerPlugin(): Plugin {
@@ -19,11 +19,8 @@ function trackerServiceWorkerPlugin(): Plugin {
       emittedFiles.add('icon-512.png');
 
       const filesArray = Array.from(emittedFiles).sort();
-      const versionHash = createHash('sha256')
-        .update(filesArray.join(','))
-        .digest('hex')
-        .slice(0, 8);
-      const cacheName = `kamotec-tracker-${versionHash}`;
+      // A new name every build, so HTML, manifest or icon edits also reach installed phones.
+      const cacheName = `kamotec-tracker-${Date.now()}`;
 
       const swContent = `// Auto-generated Service Worker for KAMOTec Hours
 const CACHE_NAME = ${JSON.stringify(cacheName)};
@@ -61,7 +58,8 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
-    caches.match(req).then((cached) => {
+    // ignoreVary: module scripts carry an Origin header that the precache requests did not.
+    caches.match(req, { ignoreVary: true }).then((cached) => {
       if (cached) return cached;
       return fetch(req).catch((err) => {
         if (req.mode === 'navigate') {
@@ -86,14 +84,6 @@ self.addEventListener('fetch', (event) => {
 // Handoff seam: his own domain builds with VITE_BASE_PATH=/ — see README.
 export default defineConfig({
   base: process.env.VITE_BASE_PATH ?? '/priced-catalog/',
-  define: {
-    global: 'globalThis',
-  },
-  resolve: {
-    alias: {
-      events: resolve(__dirname, 'src/tracker/events-shim.ts'),
-    },
-  },
   plugins: [react(), trackerServiceWorkerPlugin()],
   build: {
     rollupOptions: {

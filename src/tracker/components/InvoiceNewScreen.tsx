@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import type { JobDoc, EntryDoc, SettingsDoc, InvoiceDoc, InvoiceLineItem } from '../types';
-import { putWithRetry } from '../db';
+import { saveDoc } from '../db';
 import {
   billableHours,
   invoiceTotals,
@@ -69,6 +69,7 @@ export function InvoiceNewScreen({
   const [summary, setSummary] = useState('');
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
+  const saving = useRef(false); // a second tap during the save must not make a second invoice
 
   // Selected entries objects
   const selectedEntries = useMemo(() => {
@@ -78,7 +79,7 @@ export function InvoiceNewScreen({
   // Calculate live totals
   const totals = useMemo(() => {
     const laborHours = selectedEntries.map((e) => billableHours(e.minutes ?? 0));
-    const rateCents = (job?.rate ?? settings.defaultRate) * 100;
+    const rateCents = Math.round((job?.rate ?? settings.defaultRate) * 100);
     const items: InvoiceLineItem[] = lineItems.map((item) => ({
       kind: item.kind,
       description: item.description.trim(),
@@ -144,6 +145,8 @@ export function InvoiceNewScreen({
       return;
     }
 
+    if (saving.current) return;
+    saving.current = true;
     const newInvoiceId = `invoice:${crypto.randomUUID()}` as const;
     const formattedItems: InvoiceLineItem[] = lineItems
       .filter((item) => item.description.trim() || parseFloat(item.unitPriceStr) > 0)
@@ -167,7 +170,7 @@ export function InvoiceNewScreen({
       customer: job.customer,
       address: job.address,
       jobName: job.name,
-      rateCents: job.rate * 100,
+      rateCents: Math.round(job.rate * 100),
       taxRate: settings.taxRate,
       taxLabel: settings.taxLabel,
       paymentTerms: settings.paymentTerms,
@@ -182,14 +185,11 @@ export function InvoiceNewScreen({
     };
 
     // Save invoice document
-    await putWithRetry(invoiceDoc);
+    await saveDoc(invoiceDoc._id, () => invoiceDoc);
 
     // Set invoiceId on included entries
     for (const entry of selectedEntries) {
-      await putWithRetry({
-        ...entry,
-        invoiceId: invoiceDoc._id,
-      });
+      await saveDoc<EntryDoc>(entry._id, (e) => e && { ...e, invoiceId: invoiceDoc._id });
     }
 
     // Redirect to invoice view

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { SettingsDoc, SyncCredentials } from '../types';
 import {
-  putWithRetry,
+  saveDoc,
+  DEFAULT_SETTINGS,
   getStoredSyncCredentials,
   saveStoredSyncCredentials,
   clearStoredSyncCredentials,
@@ -20,7 +21,7 @@ export function SettingsScreen({ settings, syncStatus }: SettingsScreenProps) {
   const [businessName, setBusinessName] = useState(settings.businessName || 'KAMOTec');
   const [defaultRate, setDefaultRate] = useState(settings.defaultRate || 100);
   const [taxPercent, setTaxPercent] = useState(
-    settings.taxRate !== undefined ? (settings.taxRate * 100).toString() : '7'
+    settings.taxRate !== undefined ? String(Math.round(settings.taxRate * 10000) / 100) : '7'
   );
   const [taxLabel, setTaxLabel] = useState(settings.taxLabel || 'Indiana sales tax');
   const [paymentTerms, setPaymentTerms] = useState(
@@ -37,18 +38,16 @@ export function SettingsScreen({ settings, syncStatus }: SettingsScreenProps) {
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    const parsedTax = (parseFloat(taxPercent) || 7) / 100;
-    const updated: SettingsDoc = {
-      ...settings,
-      _id: 'settings',
-      type: 'settings',
+    const taxNumber = parseFloat(taxPercent);
+    const parsedTax = (Number.isFinite(taxNumber) ? taxNumber : 7) / 100;
+    await saveDoc<SettingsDoc>('settings', (current) => ({
+      ...(current ?? DEFAULT_SETTINGS),
       businessName: businessName.trim(),
       defaultRate: Number(defaultRate) || 100,
       taxRate: parsedTax,
       taxLabel: taxLabel.trim(),
       paymentTerms: paymentTerms.trim(),
-    };
-    await putWithRetry(updated);
+    }));
     setSettingsSaved(true);
     setTimeout(() => setSettingsSaved(false), 3000);
   };

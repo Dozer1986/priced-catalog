@@ -16,6 +16,11 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   });
 }
 
+// Saves run from click handlers nobody awaits; say so when one fails instead of losing it quietly.
+window.addEventListener('unhandledrejection', (e) => {
+  alert(`Something went wrong, so your last change may not be saved: ${e.reason?.message ?? e.reason}`);
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <TrackerApp />

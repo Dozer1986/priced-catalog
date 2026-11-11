@@ -1,7 +1,7 @@
 import { useState, useId } from 'react';
 import type { JobDoc, EntryDoc, SettingsDoc, InvoiceDoc } from '../types';
 import {
-  putWithRetry,
+  saveDoc,
   removeDoc,
   startJobTimer,
   stopEntryTimer,
@@ -109,11 +109,11 @@ export function JobScreen({
         status,
         createdAt: new Date().toISOString(),
       };
-      await putWithRetry(newJob);
+      await saveDoc(newJob._id, () => newJob);
       window.location.hash = `#/job/${newJob._id}`;
     } else if (existingJob) {
-      await putWithRetry({
-        ...existingJob,
+      await saveDoc<JobDoc>(existingJob._id, (j) => j && {
+        ...j,
         customer: customer.trim(),
         address: address.trim(),
         name: name.trim(),
@@ -144,7 +144,7 @@ export function JobScreen({
       minutes: parsedMins,
     };
 
-    await putWithRetry(newEntry);
+    await saveDoc(newEntry._id, () => newEntry);
     setTimeHours('');
     setTimeTask('');
     setTimeError('');
@@ -167,9 +167,9 @@ export function JobScreen({
       return;
     }
 
-    await putWithRetry({
-      ...entry,
-      date: editDate || entry.date,
+    await saveDoc<EntryDoc>(entry._id, (e) => e && {
+      ...e,
+      date: editDate || e.date,
       task: editTask.trim(),
       minutes: parsedMins,
     });
@@ -479,7 +479,7 @@ export function JobScreen({
             {runningEntry ? (
               <button
                 type="button"
-                onClick={() => stopEntryTimer(runningEntry)}
+                onClick={() => stopEntryTimer(runningEntry._id)}
                 className="flex min-h-[44px] items-center justify-center rounded bg-red-600 px-4 py-1.5 text-sm font-bold text-white hover:bg-red-700"
               >
                 Stop timer
@@ -487,7 +487,7 @@ export function JobScreen({
             ) : existingJob.status === 'open' ? (
               <button
                 type="button"
-                onClick={() => startJobTimer(existingJob._id, entries)}
+                onClick={() => startJobTimer(existingJob._id)}
                 className="flex min-h-[44px] items-center justify-center rounded bg-mark px-4 py-1.5 text-sm font-bold text-on-mark hover:opacity-90"
               >
                 Start timer
@@ -681,7 +681,7 @@ export function JobScreen({
                         ) : isRunning ? (
                           <button
                             type="button"
-                            onClick={() => stopEntryTimer(entry)}
+                            onClick={() => stopEntryTimer(entry._id)}
                             className="rounded bg-red-600 px-2 py-1 font-semibold text-white hover:bg-red-700"
                           >
                             Stop

@@ -52,7 +52,7 @@ function parseHash(hash: string): ParsedRoute {
 }
 
 export function TrackerApp() {
-  const { settings, jobs, entries, invoices, syncStatus } = useTrackerData();
+  const { loaded, settings, jobs, entries, invoices, syncStatus } = useTrackerData();
   const [hash, setHash] = useState(() => window.location.hash || '#/');
 
   useEffect(() => {
@@ -69,7 +69,9 @@ export function TrackerApp() {
     <div className="min-h-screen bg-paper text-ink flex flex-col font-sans">
       <Header currentPath={hash} syncStatus={syncStatus} />
 
+      {/* Screens start their forms from the data, so wait for the first load. */}
       <main className="flex-1">
+        {loaded && (<>
         {route.view === 'home' && (
           <HomeScreen jobs={jobs} entries={entries} />
         )}
@@ -120,6 +122,7 @@ export function TrackerApp() {
         {route.view === 'settings' && (
           <SettingsScreen settings={settings} syncStatus={syncStatus} />
         )}
+        </>)}
       </main>
     </div>
   );

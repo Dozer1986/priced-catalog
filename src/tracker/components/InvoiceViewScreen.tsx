@@ -1,5 +1,5 @@
 import type { InvoiceDoc, EntryDoc } from '../types';
-import { removeDoc, putWithRetry } from '../db';
+import { removeDoc, saveDoc } from '../db';
 import { formatMoney } from '../billing';
 import '../invoice.css';
 
@@ -41,9 +41,7 @@ export function InvoiceViewScreen({
       // Find matching entries
       const associated = entries.filter((e) => e.invoiceId === invoice._id);
       for (const entry of associated) {
-        const copy = { ...entry };
-        delete copy.invoiceId;
-        await putWithRetry(copy);
+        await saveDoc<EntryDoc>(entry._id, (e) => e && { ...e, invoiceId: undefined });
       }
       await removeDoc(invoice._id);
       window.location.hash = '#/invoices';

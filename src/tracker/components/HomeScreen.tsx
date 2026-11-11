@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { JobDoc, EntryDoc } from '../types';
-import { startJobTimer, stopEntryTimer, putWithRetry } from '../db';
+import { startJobTimer, stopEntryTimer, saveDoc } from '../db';
 
 interface HomeScreenProps {
   jobs: JobDoc[];
@@ -17,6 +17,8 @@ function formatElapsed(totalSeconds: number): string {
 
 export function HomeScreen({ jobs, entries }: HomeScreenProps) {
   const [now, setNow] = useState(() => new Date());
+  // What is typed on each timer card; saved on blur or Stop, not per keystroke.
+  const [taskDrafts, setTaskDrafts] = useState<Record<string, string>>({});
 
   // Running entries: start is set, end is not set
   const runningEntries = entries.filter((e) => e.start && !e.end);
@@ -33,11 +35,9 @@ export function HomeScreen({ jobs, entries }: HomeScreenProps) {
   const closedJobs = jobs.filter((j) => j.status === 'closed');
   const jobMap = new Map(jobs.map((j) => [j._id, j]));
 
-  const handleUpdateTask = async (entry: EntryDoc, task: string) => {
-    await putWithRetry({
-      ...entry,
-      task,
-    });
+  const saveTask = (id: string) => {
+    const task = taskDrafts[id];
+    if (task !== undefined) void saveDoc<EntryDoc>(id, (e) => e && { ...e, task });
   };
 
   return (
@@ -77,8 +77,9 @@ export function HomeScreen({ jobs, entries }: HomeScreenProps) {
                       id={`task-${entry._id}`}
                       type="text"
                       placeholder="What are you working on?"
-                      value={entry.task}
-                      onChange={(e) => handleUpdateTask(entry, e.target.value)}
+                      value={taskDrafts[entry._id] ?? entry.task}
+                      onChange={(e) => setTaskDrafts({ ...taskDrafts, [entry._id]: e.target.value })}
+                      onBlur={() => saveTask(entry._id)}
                       className="w-full rounded border border-rule bg-paper px-3 py-1.5 text-sm text-ink placeholder:text-ink-2/60 focus:border-mark focus:outline-none"
                     />
                   </div>
@@ -90,7 +91,7 @@ export function HomeScreen({ jobs, entries }: HomeScreenProps) {
                   </span>
                   <button
                     type="button"
-                    onClick={() => stopEntryTimer(entry)}
+                    onClick={() => stopEntryTimer(entry._id, taskDrafts[entry._id])}
                     className="flex min-h-[56px] min-w-[120px] items-center justify-center rounded bg-red-600 px-6 py-3 text-base font-bold text-white transition-colors hover:bg-red-700 active:bg-red-800"
                   >
                     Stop
@@ -170,13 +171,15 @@ export function HomeScreen({ jobs, entries }: HomeScreenProps) {
                     >
                       View
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => startJobTimer(job._id, entries)}
-                      className="flex min-h-[56px] min-w-[100px] flex-1 sm:flex-none items-center justify-center rounded bg-mark px-6 py-3 text-base font-bold text-on-mark hover:opacity-90 active:opacity-100 transition-opacity"
-                    >
-                      Start
-                    </button>
+                    {!jobRunning && (
+                      <button
+                        type="button"
+                        onClick={() => startJobTimer(job._id)}
+                        className="flex min-h-[56px] min-w-[100px] flex-1 sm:flex-none items-center justify-center rounded bg-mark px-6 py-3 text-base font-bold text-on-mark hover:opacity-90 active:opacity-100 transition-opacity"
+                      >
+                        Start
+                      </button>
+                    )}
                   </div>
                 </div>
               );

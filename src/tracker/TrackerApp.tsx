@@ -66,7 +66,7 @@ export function TrackerApp() {
   const route = parseHash(hash);
 
   return (
-    <div className="min-h-screen bg-paper text-ink flex flex-col font-sans">
+    <div className="min-h-screen bg-paper text-ink flex flex-col font-sans print:bg-white">
       <Header currentPath={hash} syncStatus={syncStatus} />
 
       {/* Screens start their forms from the data, so wait for the first load. */}

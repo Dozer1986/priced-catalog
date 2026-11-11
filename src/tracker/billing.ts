@@ -130,6 +130,11 @@ export function formatMoney(cents: number): string {
   }).format(cents / 100);
 }
 
+/** "1 hour", "2.5 hours". */
+export function hoursLabel(hours: number): string {
+  return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+}
+
 /**
  * Returns YYYY-MM-DD in local time.
  */

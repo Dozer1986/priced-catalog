@@ -9,6 +9,7 @@ import type {
   SyncCredentials,
 } from './types';
 import { getLocalDateString } from './billing';
+import { mergeEdits, sameData } from './merge';
 
 export const db = new PouchDB<TrackerDoc>('kamotec-time');
 
@@ -151,8 +152,6 @@ document.addEventListener('visibilitychange', () => {
  * Writes `change(current)`. On a conflict (409: sync or another tap saved first) it reads the
  * doc again and re-applies `change`, so a save never overwrites a newer edit.
  * `change` returns undefined to skip the write (the doc is gone, or nothing to do).
- * shortcut: offline edits to one doc on two devices conflict and CouchDB silently keeps one;
- * fine for one person, resolve `_conflicts` if a second person ever shares this database.
  */
 export async function saveDoc<T extends TrackerDoc>(
   id: string,
@@ -169,13 +168,57 @@ export async function saveDoc<T extends TrackerDoc>(
     const next = change(current);
     if (!next) return;
     try {
-      await db.put({ ...next, _rev: current?._rev } as TrackerDoc);
+      await db.put({ ...next, _rev: current?._rev, updatedAt: new Date().toISOString() } as TrackerDoc);
       return;
     } catch (err: unknown) {
       if ((err as { status?: number }).status !== 409) throw err;
     }
   }
 }
+
+/** Revision ids in a doc's history, newest first (the doc was read with `revs: true`). */
+function revHistory(doc: { _revisions?: { start: number; ids: string[] } }): string[] {
+  const { start, ids } = doc._revisions ?? { start: 0, ids: [] };
+  return ids.map((hash, i) => `${start - i}-${hash}`);
+}
+
+/**
+ * Two devices that edit one doc while offline leave a conflict once they sync, and CouchDB shows
+ * only one side. This folds the other sides into it (see mergeEdits) and deletes them.
+ */
+async function mergeConflicts(id: string): Promise<void> {
+  const winner = await db.get(id, { conflicts: true, revs: true });
+  const losers = winner._conflicts ?? [];
+  const history = new Set(revHistory(winner));
+  let merged: TrackerDoc = winner;
+  for (const rev of losers) {
+    const loser = await db.get(id, { rev, revs: true });
+    const baseRev = revHistory(loser).find((r) => history.has(r));
+    const base = baseRev
+      ? await db.get(id, { rev: baseRev }).catch((err: { status?: number }) => {
+          if (err.status === 404) return undefined; // body compacted away: merge without it
+          throw err;
+        })
+      : undefined;
+    merged = mergeEdits(base, merged, loser);
+  }
+  // Skip a no-op save: two devices merging at once would otherwise make a new conflict every round
+  if (!sameData(merged, winner)) {
+    try {
+      await db.put({ ...merged, _rev: winner._rev });
+    } catch (err: unknown) {
+      if ((err as { status?: number }).status === 409) return; // changed meanwhile; that change merges again
+      throw err;
+    }
+  }
+  for (const rev of losers) {
+    await db.remove(id, rev).catch((err: { status?: number }) => {
+      if (err.status !== 404 && err.status !== 409) throw err; // another tab removed it first
+    });
+  }
+}
+
+let merging: Promise<void> = Promise.resolve();
 
 /**
  * Deletes a document by ID.
@@ -243,11 +286,17 @@ export function useTrackerData() {
   const [syncStatus, setStatusState] = useState<string>(currentSyncStatus);
 
   const reload = useCallback(async () => {
-    const res = await db.allDocs({ include_docs: true });
+    const res = await db.allDocs({ include_docs: true, conflicts: true });
     const loaded: TrackerDoc[] = [];
     for (const row of res.rows) {
       if (row.doc && 'type' in row.doc) {
         loaded.push(row.doc as unknown as TrackerDoc);
+      }
+      if (row.doc?._conflicts) {
+        // One at a time; the merge's own save brings the next reload.
+        merging = merging
+          .then(() => mergeConflicts(row.id))
+          .catch((err: unknown) => console.error('Merging offline edits failed', err));
       }
     }
     setDocs(loaded);

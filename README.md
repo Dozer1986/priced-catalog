@@ -192,6 +192,12 @@ Nothing else needs to change. All of the identity and contact details are in `sr
 
 ---
 
+## Hours tracker
+
+Open `https://dozer1986.github.io/priced-catalog/tracker.html` to track job hours and generate invoices. On iPhone, tap Share → Add to Home Screen to install it as an app with offline support. In Settings (`#/settings`), enter your sync credentials to sync data over Tailscale with the CouchDB database `kamotec-time` on CT100.
+
+---
+
 ## Before this goes live
 
 The site should stay behind a private link until all four of these are true. None of them are optional, and the last two are specific to Indiana.

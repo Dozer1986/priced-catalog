@@ -151,6 +151,8 @@ document.addEventListener('visibilitychange', () => {
  * Writes `change(current)`. On a conflict (409: sync or another tap saved first) it reads the
  * doc again and re-applies `change`, so a save never overwrites a newer edit.
  * `change` returns undefined to skip the write (the doc is gone, or nothing to do).
+ * shortcut: offline edits to one doc on two devices conflict and CouchDB silently keeps one;
+ * fine for one person, resolve `_conflicts` if a second person ever shares this database.
  */
 export async function saveDoc<T extends TrackerDoc>(
   id: string,

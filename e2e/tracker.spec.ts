@@ -210,3 +210,17 @@ test('tracker: a second quick Save makes no duplicate invoice, and a reload keep
   await expect(page.getByLabel('Invoice Number')).toHaveValue('INV-2026-003');
   await expect(page.getByRole('checkbox')).toBeChecked();
 });
+
+test('tracker: editing only the task keeps the real minutes', async ({ page }) => {
+  await newJobWithHour(page, 'Dryer outlet');
+  await page.getByLabel(/Hours/).fill('0:52');
+  await page.getByLabel('Task description').fill('Wired the dryer');
+  await page.getByRole('button', { name: 'Add time' }).click();
+  await page.getByRole('row', { name: /Wired the dryer/ }).getByRole('button', { name: 'Edit' }).click();
+  const hours = page.getByPlaceholder('Hours e.g. 2.5');
+  await expect(hours).toHaveValue('0:52');
+  const editRow = page.locator('tr').filter({ has: hours });
+  await editRow.locator('input[type="text"]').first().fill('Wired the dryer outlet');
+  await editRow.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('row', { name: /Wired the dryer outlet/ })).toContainText('52m');
+});

@@ -153,9 +153,8 @@ export function JobScreen({
   const handleStartEditEntry = (entry: EntryDoc) => {
     setEditingEntryId(entry._id);
     setEditDate(entry.date);
-    const mins = entry.minutes ?? 0;
-    const hrs = billableHours(mins);
-    setEditHours(String(hrs));
+    const mins = Math.round(entry.minutes ?? 0); // real time as h:mm, so saving keeps it
+    setEditHours(`${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, '0')}`);
     setEditTask(entry.task);
     setEditError('');
   };

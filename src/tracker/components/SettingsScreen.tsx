@@ -256,7 +256,7 @@ export function SettingsScreen({ settings, syncStatus }: SettingsScreenProps) {
               never in the database, never in the repo. Saving them immediately connects to sync.
             </p>
             <p className="mt-1">
-              Be honest: hours that have not synced exist only on this device.
+              Hours that haven't synced yet are only on this device.
             </p>
           </div>
 

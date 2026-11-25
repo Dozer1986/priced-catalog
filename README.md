@@ -199,6 +199,7 @@ A second page for logging the hours you spend on a job and billing for them: htt
 - Track time with the Start button on a job, or type the hours in (`2.5` or `2:30`). Each entry is billed to the nearest 15 minutes.
 - To install it on the iPhone, open the page in Safari and tap Share, then Add to Home Screen. It then opens like an app and works offline. A running timer keeps counting after you close it.
 - To make an invoice, open the job and tap Create invoice. Tick the entries to bill, add any equipment and materials, save it, then use Print / Save as PDF. Sales tax is charged on equipment and materials. Labor is never taxed.
+- Measure opens the handrail site-measure page, which also works offline. It lists what to measure, takes the rise and run of each step, and lays out the posts and the shop cut list. Its jobs stay in that browser and don't sync, so use Export to keep a copy with the job.
 - Settings holds the business name, the default hourly rate (each job can have its own), the tax rate and the payment terms.
 
 Hours are saved on the device first. To share them between the phone and the computer, enter the sync password in Settings on each one; the server and username are already filled in. Sync runs over Tailscale to CouchDB on CT100, so a device that was off the tailnet catches up the next time it's on.

@@ -35,7 +35,7 @@ export function Header({ currentPath, syncStatus }: HeaderProps) {
           </a>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div
             className="flex items-center gap-1.5 text-xs text-ink-2"
             title={syncStatus}

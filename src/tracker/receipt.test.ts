@@ -78,9 +78,9 @@ describe('reading and saving', () => {
     const { lines } = fieldsFromExtract({
       date: null, vendor: null, storeCity: null, storeState: null, paidWith: null,
       subtotal: null, tax: null, total: null, notes: null,
-      lines: [line(100, 0.125), line(15.234, 3.499), line(3, 1.99)],
+      lines: [line(100, 0.125), line(15.234, 3.499), line(3, 1.99), line(-100, 0.125), line(1, -2.505)],
     });
-    expect(lines.map(({ qty, unitPriceCents }) => [qty, unitPriceCents])).toEqual([[1, 1250], [1, 5330], [3, 199]]);
+    expect(lines.map(({ qty, unitPriceCents }) => [qty, unitPriceCents])).toEqual([[1, 1250], [1, 5330], [3, 199], [-1, 1250], [1, -251]]);
   });
   it('rejects a typed amount finer than a cent', () => {
     expect(parseSignedCents('0.125', null)).toBeUndefined();

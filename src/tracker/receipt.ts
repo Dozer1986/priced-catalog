@@ -100,8 +100,8 @@ export function fieldsFromExtract(x: ExtractedReceipt): ReceiptFields {
         item: l.item,
         description: l.description,
         sku: l.sku ?? '',
-        qty: subCent ? 1 : l.qty,
-        unitPriceCents: subCent ? dollarsToCents(l.qty * l.unitPrice)! : unitPriceCents,
+        qty: subCent ? Math.sign(l.qty) : l.qty,
+        unitPriceCents: subCent ? dollarsToCents(Math.abs(l.qty) * l.unitPrice)! : unitPriceCents,
         taxRate: l.taxRate,
       });
     }),

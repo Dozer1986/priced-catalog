@@ -46,7 +46,7 @@ function parseLen(s) {
   if (!s) return null;
   let ft = 0, m = s.match(/^(-?\d+(?:\.\d+)?)\s*['’]\s*-?\s*(.*)$/);
   if (m) { ft = +m[1]; s = m[2].trim(); if (!s) return ft * 12; }
-  m = s.match(/^(\d+(?:\.\d+)?)?(?:[\s-]+)?(?:(\d+)\/(\d+))?$/);
+  m = s.match(/^(?:(\d+(?:\.\d+)?)(?:[\s-]+|$))?(?:(\d+)\/(\d+))?$/);
   if (!m || (m[1] == null && m[2] == null) || (m[3] && +m[3] === 0)) return NaN;
   return ft * 12 + (m[1] ? +m[1] : 0) + (m[2] ? m[2] / m[3] : 0);
 }
@@ -261,7 +261,7 @@ function cut() {
     h += `<h3>${esc(f.name)}: ${r.deg.toFixed(1)}°, rail cut ${fmt(r.rail)} (before end plates)</h3>
 <table><tr><th>Post</th><th>Timber</th><th>From rail bottom end, along rail</th><th>Span to next</th><th>Timber top to rail top</th><th>Cut tube</th><th>Top cut</th></tr>
 ${r.posts.map((q, i) => { const c = q.tube + S.trim; postTot += c;
-  return `<tr><td>P${i + 1}</td><td>${q.riser}</td><td>${fmt(q.along + S.back)}</td><td>${r.spans[i] != null ? fmt(r.spans[i]) : ''}</td><td>${fmt(q.top)}</td><td><b>${fmt(c)}</b></td><td>${S.bracket ? 'square' : r.deg.toFixed(1) + '°'}</td></tr>`; }).join('')}</table>`;
+  return `<tr><td>P${i + 1}</td><td>${q.riser}</td><td>${fmt(q.along)}</td><td>${r.spans[i] != null ? fmt(r.spans[i]) : ''}</td><td>${fmt(q.top)}</td><td><b>${fmt(c)}</b></td><td>${S.bracket ? 'square' : r.deg.toFixed(1) + '°'}</td></tr>`; }).join('')}</table>`;
   });
   if (S.bracket && !(S.stack > 0)) h = h.replace('</h2>', '</h2><p class="bad">Bracket height is not set: post lengths below are too long by the bracket height.</p>');
   if (bad.length) h += `<p class="bad">Not measured yet: ${bad.map(esc).join(', ')}</p>`;

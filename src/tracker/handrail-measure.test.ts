@@ -21,6 +21,10 @@ describe('handrail measure', () => {
     expect(parseLen('5 5/8')).toBe(5.625);
     expect(parseLen('5-5/8"')).toBe(5.625);
     expect(parseLen("4' 3-1/2")).toBe(51.5);
+    expect(parseLen('15/16')).toBe(0.9375);
+    expect(parseLen("4' 11/16")).toBe(48.6875);
+    expect(parseLen('3/4')).toBe(0.75);
+    expect(parseLen('5.625')).toBe(5.625);
     expect(parseLen('')).toBeNull();
     expect(parseLen('5 5/ 8')).toBeNaN();
   });

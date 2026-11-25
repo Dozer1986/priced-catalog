@@ -70,7 +70,7 @@ export function newLine(partial: Partial<ReceiptLine> = {}): ReceiptLine {
 export function parseSignedCents<B extends number | null>(text: string, blank: B): number | B | undefined {
   const clean = text.trim();
   if (!clean) return blank;
-  const m = /^(-?)\s*\$?\s*(\d+|\d{1,3}(,\d{3})+)(\.\d+)?$/.exec(clean);
+  const m = /^(-?)\s*\$?\s*(\d+|\d{1,3}(,\d{3})+)(\.\d{1,2})?$/.exec(clean);
   if (!m) return undefined;
   const cents = dollarsToCents(parseFloat(m[2]!.replace(/,/g, '') + (m[4] ?? '')))!;
   return m[1] ? -cents : cents;
@@ -93,16 +93,18 @@ export function fieldsFromExtract(x: ExtractedReceipt): ReceiptFields {
     taxCents: dollarsToCents(x.tax),
     totalCents: dollarsToCents(x.total),
     notes: x.notes ?? '',
-    lines: x.lines.map((l) =>
-      newLine({
+    lines: x.lines.map((l) => {
+      const unitPriceCents = dollarsToCents(l.unitPrice)!;
+      const subCent = Math.abs(l.unitPrice * 100 - unitPriceCents) > 1e-6;
+      return newLine({
         item: l.item,
         description: l.description,
         sku: l.sku ?? '',
-        qty: l.qty,
-        unitPriceCents: dollarsToCents(l.unitPrice)!,
+        qty: subCent ? 1 : l.qty,
+        unitPriceCents: subCent ? dollarsToCents(l.qty * l.unitPrice)! : unitPriceCents,
         taxRate: l.taxRate,
-      }),
-    ),
+      });
+    }),
   };
 }
 

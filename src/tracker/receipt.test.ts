@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { defaultBillable, lineTotalCents, linesTotalCents, totalMismatchCents, newLine, dollarsToCents, fieldsFromExtract, changedFields } from './receipt';
+import { defaultBillable, lineTotalCents, linesTotalCents, totalMismatchCents, newLine, dollarsToCents, fieldsFromExtract, changedFields, parseSignedCents } from './receipt';
 
 describe('defaultBillable', () => {
   it('is yes for ordinary work', () => {
@@ -72,6 +72,19 @@ describe('reading and saving', () => {
   it('turns printed dollars into cents and keeps a return negative', () => {
     expect(read).toMatchObject({ paidWith: '', totalCents: 1124, lines: [{ qty: -1, unitPriceCents: 1050, sku: '', billable: true }] });
     expect(linesTotalCents(read.lines)).toBe(-1124);
+  });
+  it('books a sub-cent unit price as qty 1 at the printed line amount', () => {
+    const line = (qty: number, unitPrice: number) => ({ item: 'X', description: 'X', sku: null, qty, unitPrice, taxRate: 0 });
+    const { lines } = fieldsFromExtract({
+      date: null, vendor: null, storeCity: null, storeState: null, paidWith: null,
+      subtotal: null, tax: null, total: null, notes: null,
+      lines: [line(100, 0.125), line(15.234, 3.499), line(3, 1.99)],
+    });
+    expect(lines.map(({ qty, unitPriceCents }) => [qty, unitPriceCents])).toEqual([[1, 1250], [1, 5330], [3, 199]]);
+  });
+  it('rejects a typed amount finer than a cent', () => {
+    expect(parseSignedCents('0.125', null)).toBeUndefined();
+    expect(parseSignedCents('-$1,200.5', null)).toBe(-120050);
   });
   it('saves only the fields the user changed', () => {
     const edited = { ...read, vendor: 'Menards #3305', lines: [{ ...read.lines[0]!, project: 'Smith' }] };

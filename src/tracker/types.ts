@@ -1,3 +1,4 @@
+import type { MeasureFlight, MeasureSettings } from './measure';
 export interface SettingsDoc {
   _id: 'settings';
   _rev?: string;
@@ -131,7 +132,26 @@ export interface ListsDoc {
   paidWith: string[];
 }
 
-export type TrackerDoc = SettingsDoc | JobDoc | EntryDoc | InvoiceDoc | ReceiptDoc | ListsDoc;
+/** A stair handrail site-measure job from the Measure page (handrail-measure.html). Lengths are tape text, e.g. "5-5/8". */
+export interface MeasureDoc {
+  _id: `measure:${string}`;
+  _rev?: string;
+  updatedAt?: string;
+  type: 'measure';
+  name: string;
+  site: string;
+  date: string; // 'YYYY-MM-DD'
+  jobId: string; // references job._id, '' when not linked
+  width: string;
+  inset: string;
+  notes: string;
+  settings: MeasureSettings;
+  // shortcut: flights merge as one field, so two devices editing different flights offline keep only the later save; split per flight if two people ever measure at once
+  flights: MeasureFlight[];
+  createdAt: string;
+}
+
+export type TrackerDoc = SettingsDoc | JobDoc | EntryDoc | InvoiceDoc | ReceiptDoc | ListsDoc | MeasureDoc;
 
 export interface SyncCredentials {
   url: string;

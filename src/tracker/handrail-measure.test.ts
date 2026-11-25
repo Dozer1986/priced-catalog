@@ -1,20 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { parseLen, fmt, computeFlight, settings, DEFAULT_SETTINGS } from './measure';
+import { mergeEdits } from './merge';
+import type { MeasureDoc } from './types';
 
-// public/handrail-measure.html is a standalone page; its <script id="core"> holds the geometry.
-const html = readFileSync(resolve(__dirname, '../../public/handrail-measure.html'), 'utf8');
-const core = html.match(/<script id="core">([\s\S]*?)<\/script>/)![1]!;
-interface Core {
-  parseLen(s: string): number | null;
-  settings(p: unknown): unknown;
-  computeFlight(f: unknown, s: unknown): { missing?: boolean; posts: { riser: number }[]; rail: number; heights: number[] };
-}
-const mod = { exports: {} as Core };
-new Function('module', core)(mod);
-const { parseLen, computeFlight, settings } = mod.exports;
-
-const S = settings({ settings: { H: '36', lo: '34', hi: '38', span: '72', back: '2-3/4', tail: '2-3/4',
-  railH: '1-1/2', plate: '3/8', bracket: false, stack: '', trim: '' } });
+const S = settings({ ...DEFAULT_SETTINGS, plate: '0', trim: '' });
 
 describe('handrail measure', () => {
   it('reads tape-measure fractions', () => {
@@ -27,17 +15,45 @@ describe('handrail measure', () => {
     expect(parseLen('5.625')).toBe(5.625);
     expect(parseLen('')).toBeNull();
     expect(parseLen('5 5/ 8')).toBeNaN();
+    expect(parseLen('1/0')).toBeNaN();
   });
 
-  it('lays out the Cottage top flight like the quote', () => {
-    const steps = [{ rise: '5-5/8', run: '' }, ...Array(11).fill({ rise: '5-5/8', run: '19-7/8' })];
+  it('prints sixteenths', () => {
+    expect(fmt(35.21875)).toBe('35-1/4"');
+    expect(fmt(2.75)).toBe('2-3/4"');
+    expect(fmt(0.5)).toBe('1/2"');
+    expect(fmt(11.99)).toBe('12"');
+  });
+
+  it('lays out the Cottage top flight like the quote (fab.py)', () => {
+    const steps = [{ rise: '5-5/8', run: '', post: null, note: '' },
+      ...Array.from({ length: 11 }, () => ({ rise: '5-5/8', run: '19-7/8', post: null, note: '' }))];
     const r = computeFlight({ steps }, S);
-    expect(r.posts.map((p) => p.riser)).toEqual([1, 4, 7, 9, 12]); // half-to-even, as fab.py
+    if (r.missing) throw new Error('missing');
+    expect(r.posts.map((p) => p.riser)).toEqual([1, 4, 7, 9, 12]); // half-to-even rounding, as fab.py
     expect(r.rail).toBeCloseTo(232.93, 2);
+    expect(r.posts[0]!.along).toBeCloseTo(2.86, 2); // setback counted once
+    expect(r.posts[0]!.under).toBeCloseTo(35.219, 3);
     expect(r.heights.every((h) => h >= 34 && h <= 38)).toBe(true);
   });
 
-  it('waits for missing measurements', () => {
-    expect(computeFlight({ steps: [{ rise: '5', run: '' }, { rise: '', run: '20' }] }, S).missing).toBe(true);
+  it('takes posts set by hand', () => {
+    const steps = Array.from({ length: 4 }, (_, i) => ({ rise: '6', run: i ? '12' : '', post: i === 0 || i === 2 ? true : null, note: '' }));
+    const r = computeFlight({ steps }, S);
+    expect(!r.missing && r.posts.map((p) => p.riser)).toEqual([1, 3]);
+  });
+
+  it('waits for missing or unreadable measurements', () => {
+    const blank = { post: null, note: '' };
+    expect(computeFlight({ steps: [{ rise: '5', run: '', ...blank }, { rise: '', run: '20', ...blank }] }, S).missing).toBe(true);
+    expect(computeFlight({ steps: [{ rise: '5', run: '', ...blank }, { rise: '5 5/ 8', run: '20', ...blank }] }, S).missing).toBe(true);
+  });
+
+  it('merges offline edits to different fields of one measure job', () => {
+    const base: MeasureDoc = { _id: 'measure:1', type: 'measure', name: 'Cottage', site: '', date: '2026-11-25', jobId: '',
+      width: '', inset: '', notes: '', settings: DEFAULT_SETTINGS, flights: [], createdAt: '2026-11-25T00:00:00Z', updatedAt: 'a' };
+    const phone = { ...base, width: '48', updatedAt: 'b' };
+    const laptop = { ...base, jobId: 'job:9', updatedAt: 'c' };
+    expect(mergeEdits(base, phone, laptop)).toMatchObject({ width: '48', jobId: 'job:9' });
   });
 });

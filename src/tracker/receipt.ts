@@ -1,19 +1,21 @@
-import type { ReceiptLine } from './types';
+import type { ReceiptDoc, ReceiptLine } from './types';
 
 /** Rounds half away from zero, so a return rounds to the negative of the purchase. */
 const roundCents = (x: number) => Math.sign(x) * Math.round(Math.abs(Number(x.toFixed(6))));
 
+type Priced = Pick<ReceiptLine, 'qty' | 'unitPriceCents' | 'taxRate'>;
+
 /** One line's total with tax, in cents. Qty is negative for a return. */
-export function lineTotalCents(line: Pick<ReceiptLine, 'qty' | 'unitPriceCents' | 'taxRate'>): number {
+export function lineTotalCents(line: Priced): number {
   return roundCents(line.qty * line.unitPriceCents * (1 + line.taxRate)) || 0;
 }
 
-export function linesTotalCents(lines: ReceiptLine[]): number {
+export function linesTotalCents(lines: Priced[]): number {
   return lines.reduce((sum, l) => sum + lineTotalCents(l), 0);
 }
 
 /** Cents the lines are off from the printed receipt total, or null when they agree (within $0.02) or no total was read. */
-export function totalMismatchCents(lines: ReceiptLine[], totalCents: number | null): number | null {
+export function totalMismatchCents(lines: Priced[], totalCents: number | null): number | null {
   if (totalCents === null) return null;
   const diff = linesTotalCents(lines) - totalCents;
   return Math.abs(diff) > 2 ? diff : null;
@@ -70,6 +72,43 @@ export function parseSignedCents<B extends number | null>(text: string, blank: B
   if (!clean) return blank;
   const m = /^(-?)\s*\$?\s*(\d+|\d{1,3}(,\d{3})+)(\.\d+)?$/.exec(clean);
   if (!m) return undefined;
-  const cents = dollarsToCents(parseFloat(m[2].replace(/,/g, '') + (m[4] ?? '')))!;
+  const cents = dollarsToCents(parseFloat(m[2]!.replace(/,/g, '') + (m[4] ?? '')))!;
   return m[1] ? -cents : cents;
+}
+
+/** The parts of a receipt the review form edits. */
+export type ReceiptFields = Pick<
+  ReceiptDoc,
+  'date' | 'vendor' | 'storeCity' | 'storeState' | 'paidWith' | 'subtotalCents' | 'taxCents' | 'totalCents' | 'notes' | 'lines'
+>;
+
+export function fieldsFromExtract(x: ExtractedReceipt): ReceiptFields {
+  return {
+    date: x.date ?? '',
+    vendor: x.vendor ?? '',
+    storeCity: x.storeCity ?? '',
+    storeState: x.storeState ?? '',
+    paidWith: x.paidWith ?? '',
+    subtotalCents: dollarsToCents(x.subtotal),
+    taxCents: dollarsToCents(x.tax),
+    totalCents: dollarsToCents(x.total),
+    notes: x.notes ?? '',
+    lines: x.lines.map((l) =>
+      newLine({
+        item: l.item,
+        description: l.description,
+        sku: l.sku ?? '',
+        qty: l.qty,
+        unitPriceCents: dollarsToCents(l.unitPrice)!,
+        taxRate: l.taxRate,
+      }),
+    ),
+  };
+}
+
+/** Only the fields that differ, so an edit saved on top of a newer doc keeps the other changes (see merge.ts). */
+export function changedFields(before: ReceiptFields, after: ReceiptFields): Partial<ReceiptFields> {
+  return Object.fromEntries(
+    Object.entries(after).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(before[k as keyof ReceiptFields])),
+  );
 }

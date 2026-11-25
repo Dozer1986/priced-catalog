@@ -23,7 +23,7 @@ test('tracker: Aaron tracks hours and creates an invoice', async ({ page }) => {
 
   // Open the tracker page
   await page.goto('/priced-catalog/tracker.html');
-  await expect(page.getByText('KAMOTec Hours')).toBeVisible();
+  await expect(page.getByText('KAMO Services')).toBeVisible();
   await expect(page.getByText('Sync not set up')).toBeVisible();
 
   // Create job "Faucet swap" for "Pat Example"

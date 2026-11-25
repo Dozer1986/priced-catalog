@@ -91,7 +91,7 @@ export function SettingsScreen({ settings, syncStatus }: SettingsScreenProps) {
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink">Settings</h1>
         <p className="mt-1 text-sm text-ink-2">
-          Configure business defaults and database sync for KAMOTec Hours.
+          Configure business defaults and database sync for KAMO Services.
         </p>
       </div>
 

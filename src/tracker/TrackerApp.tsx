@@ -7,6 +7,8 @@ import { InvoiceNewScreen } from './components/InvoiceNewScreen';
 import { InvoiceViewScreen } from './components/InvoiceViewScreen';
 import { InvoicesListScreen } from './components/InvoicesListScreen';
 import { SettingsScreen } from './components/SettingsScreen';
+import { ReceiptsListScreen } from './components/ReceiptsListScreen';
+import { ReceiptScreen } from './components/ReceiptScreen';
 
 interface ParsedRoute {
   view:
@@ -16,8 +18,11 @@ interface ParsedRoute {
     | 'invoice-new'
     | 'invoice-detail'
     | 'invoices'
-    | 'settings';
+    | 'settings'
+    | 'receipts'
+    | 'receipt';
   jobId?: string;
+  receiptId?: string;
   invoiceId?: string;
 }
 
@@ -45,6 +50,13 @@ function parseHash(hash: string): ParsedRoute {
   if (clean === '/invoices') {
     return { view: 'invoices' };
   }
+  if (clean === '/receipts') {
+    return { view: 'receipts' };
+  }
+  if (clean.startsWith('/receipt/')) {
+    const id = clean.slice('/receipt/'.length);
+    return { view: 'receipt', receiptId: id === 'new' ? undefined : id };
+  }
   if (clean === '/settings') {
     return { view: 'settings' };
   }
@@ -52,7 +64,7 @@ function parseHash(hash: string): ParsedRoute {
 }
 
 export function TrackerApp() {
-  const { loaded, settings, jobs, entries, invoices, syncStatus } = useTrackerData();
+  const { loaded, settings, jobs, entries, invoices, receipts, lists, syncStatus } = useTrackerData();
   const [hash, setHash] = useState(() => window.location.hash || '#/');
 
   useEffect(() => {
@@ -117,6 +129,13 @@ export function TrackerApp() {
 
         {route.view === 'invoices' && (
           <InvoicesListScreen invoices={invoices} />
+        )}
+
+        {route.view === 'receipts' && <ReceiptsListScreen receipts={receipts} />}
+
+        {route.view === 'receipt' && (
+          // keyed so moving between receipts starts a fresh form
+          <ReceiptScreen key={hash} receiptId={route.receiptId} receipts={receipts} lists={lists} />
         )}
 
         {route.view === 'settings' && (

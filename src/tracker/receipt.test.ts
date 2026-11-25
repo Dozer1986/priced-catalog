@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { defaultBillable, lineTotalCents, linesTotalCents, totalMismatchCents, newLine, dollarsToCents } from './receipt';
-import { mergeEdits } from './merge';
-import type { ReceiptDoc } from './types';
+import { defaultBillable, lineTotalCents, linesTotalCents, totalMismatchCents, newLine, dollarsToCents, fieldsFromExtract, changedFields } from './receipt';
 
 describe('defaultBillable', () => {
   it('is yes for ordinary work', () => {
@@ -65,39 +63,19 @@ describe('totalMismatchCents', () => {
   });
 });
 
-describe('merge of two offline edits of one receipt', () => {
-  const base: ReceiptDoc = {
-    _id: 'receipt:1',
-    type: 'receipt',
-    status: 'confirmed',
-    date: '2026-11-10',
-    vendor: 'Menards',
-    storeCity: 'Evansville',
-    storeState: 'IN',
-    paidWith: 'Visa',
-    subtotalCents: 1000,
-    taxCents: 70,
-    totalCents: 1070,
-    notes: '',
-    lines: [newLine({ item: 'SCREWS', qty: 1, unitPriceCents: 1000, taxRate: 0.07, project: 'Smith' })],
-    createdAt: '2026-11-10T10:00:00Z',
-    updatedAt: '2026-11-10T10:00:00Z',
-  };
-  const phone = { ...base, vendor: 'Menards #3305', updatedAt: '2026-11-11T09:00:00Z' };
-  const laptop = {
-    ...base,
-    lines: [{ ...base.lines[0], category: 'Materials' }],
-    updatedAt: '2026-11-11T08:00:00Z',
-  };
-
-  it('keeps a header change from one side and the lines from the other', () => {
-    for (const [a, b] of [[phone, laptop], [laptop, phone]] as const) {
-      expect(mergeEdits(base, a, b)).toMatchObject({ vendor: 'Menards #3305', lines: laptop.lines });
-    }
+describe('reading and saving', () => {
+  const read = fieldsFromExtract({
+    date: '2026-11-10', vendor: 'Menards', storeCity: 'Evansville', storeState: 'IN', paidWith: null,
+    subtotal: 10.5, tax: 0.74, total: 11.24, notes: null,
+    lines: [{ item: 'RETURN 2X4', description: 'Returned stud', sku: null, qty: -1, unitPrice: 10.5, taxRate: 0.07 }],
   });
-  it('takes the later save’s lines whole when both sides edited lines', () => {
-    const other = { ...base, lines: [{ ...base.lines[0], project: 'Jones' }], updatedAt: '2026-11-11T10:00:00Z' };
-    const merged = mergeEdits(base, laptop, other) as ReceiptDoc;
-    expect(merged.lines).toEqual(other.lines);
+  it('turns printed dollars into cents and keeps a return negative', () => {
+    expect(read).toMatchObject({ paidWith: '', totalCents: 1124, lines: [{ qty: -1, unitPriceCents: 1050, sku: '', billable: true }] });
+    expect(linesTotalCents(read.lines)).toBe(-1124);
+  });
+  it('saves only the fields the user changed', () => {
+    const edited = { ...read, vendor: 'Menards #3305', lines: [{ ...read.lines[0]!, project: 'Smith' }] };
+    expect(Object.keys(changedFields(read, edited)).sort()).toEqual(['lines', 'vendor']);
+    expect(changedFields(read, { ...read })).toEqual({});
   });
 });

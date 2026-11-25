@@ -117,6 +117,7 @@ export interface ReceiptDoc {
   photoName?: string; // set by the ledger importer: where the photo was filed
   importedAt?: string; // set by the ledger importer: the lines are in the ledger
   ledgerRows?: number[];
+  _attachments?: PouchDB.Core.Attachments; // the photo or PDF, as original.<ext>
 }
 
 /** Dropdown choices published from the ledger by the importer. */

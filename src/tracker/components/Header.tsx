@@ -67,6 +67,12 @@ export function Header({ currentPath, syncStatus }: HeaderProps) {
               Invoices
             </a>
             <a
+              href="handrail-measure.html"
+              className="rounded px-2.5 py-1 text-sm font-medium text-ink-2 transition-colors hover:text-ink"
+            >
+              Measure
+            </a>
+            <a
               href="#/settings"
               className={`rounded px-2.5 py-1 text-sm font-medium transition-colors ${
                 isNavActive('#/settings')

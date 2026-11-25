@@ -95,6 +95,7 @@ export function fieldsFromExtract(x: ExtractedReceipt): ReceiptFields {
     notes: x.notes ?? '',
     lines: x.lines.map((l) => {
       const unitPriceCents = dollarsToCents(l.unitPrice)!;
+      // Cents can't hold a price like $0.125, so book that line as qty ±1 at its printed amount.
       const subCent = Math.abs(l.unitPrice * 100 - unitPriceCents) > 1e-6;
       return newLine({
         item: l.item,

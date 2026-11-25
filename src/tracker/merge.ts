@@ -19,6 +19,7 @@ export function sameData(a: TrackerDoc, b: TrackerDoc): boolean {
  * the version both edits started from, when this device still has it. A field changed on one
  * side keeps that change; a field changed on both keeps the later save. A timer stopped on both
  * keeps the earlier stop, because the later one came from a device that still showed it running.
+ * A receipt's `lines` array is one field: if both sides edited lines, the later save's lines win whole.
  */
 export function mergeEdits(base: TrackerDoc | undefined, a: TrackerDoc, b: TrackerDoc): TrackerDoc {
   const [x, y, o] = [a, b, base ?? {}] as unknown as [Fields, Fields, Fields];

@@ -85,7 +85,52 @@ export interface InvoiceDoc {
   totals: InvoiceTotals;
 }
 
-export type TrackerDoc = SettingsDoc | JobDoc | EntryDoc | InvoiceDoc;
+export interface ReceiptLine {
+  item: string; // as printed on the receipt
+  description: string; // plain English
+  sku: string;
+  qty: number; // negative for a return
+  unitPriceCents: number;
+  taxRate: number; // e.g. 0.07
+  category: string;
+  project: string;
+  billable: boolean;
+}
+
+export interface ReceiptDoc {
+  _id: `receipt:${string}`;
+  _rev?: string;
+  updatedAt?: string;
+  type: 'receipt';
+  status: 'confirmed';
+  date: string; // 'YYYY-MM-DD'
+  vendor: string;
+  storeCity: string;
+  storeState: string;
+  paidWith: string;
+  subtotalCents: number | null; // as printed on the receipt
+  taxCents: number | null;
+  totalCents: number | null;
+  notes: string;
+  lines: ReceiptLine[];
+  createdAt: string;
+  photoName?: string; // set by the ledger importer: where the photo was filed
+  importedAt?: string; // set by the ledger importer: the lines are in the ledger
+  ledgerRows?: number[];
+}
+
+/** Dropdown choices published from the ledger by the importer. */
+export interface ListsDoc {
+  _id: 'lists';
+  _rev?: string;
+  updatedAt?: string;
+  type: 'lists';
+  projects: string[];
+  categories: string[];
+  paidWith: string[];
+}
+
+export type TrackerDoc = SettingsDoc | JobDoc | EntryDoc | InvoiceDoc | ReceiptDoc | ListsDoc;
 
 export interface SyncCredentials {
   url: string;

@@ -8,6 +8,7 @@ This file is the project's committed home for project-intrinsic agent knowledge:
 - Page metadata is configured in `src/site.config.ts` and applied through `src/site-metadata.ts`; `TODO_` values intentionally produce no metadata tag.
 - Tracker code lives in `src/tracker/`; money is integer cents. The `events` dependency is for PouchDB (nothing imports it directly): a hand-written shim without `newListener` leaves the sync status stuck.
 - Every tracker edit goes through `saveDoc` (`src/tracker/db.ts`), which stamps `updatedAt`; deletes (`removeDoc`) and the conflict merge (`mergeConflicts`) write directly, the merge on purpose so devices resolving the same conflict produce the same data. `src/tracker/merge.ts` uses `updatedAt` to merge offline edits from two devices field by field, so a form must save only the fields the user changed.
+- Receipts: the app posts a photo to `services/receipt-reader` (Claude) and saves a `receipt:` doc with the photo attached; `services/ledger-importer` (LibreOffice UNO in Docker, on CT100) appends it to the ledger and sets `importedAt`. Each service has its own README and tests; root `npm test` does not run them.
 
 ## Maintaining this file
 

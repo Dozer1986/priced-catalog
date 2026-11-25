@@ -199,6 +199,7 @@ A second page for logging the hours you spend on a job and billing for them: htt
 - Track time with the Start button on a job, or type the hours in (`2.5` or `2:30`). Each entry is billed to the nearest 15 minutes.
 - To install it on the iPhone, open the page in Safari and tap Share, then Add to Home Screen. It then opens like an app and works offline. A running timer keeps counting after you close it.
 - To make an invoice, open the job and tap Create invoice. Tick the entries to bill, add any equipment and materials, save it, then use Print / Save as PDF. Sales tax is charged on equipment and materials. Labor is never taxed.
+- To log a store receipt, open Receipts and tap New receipt, then take a photo or choose a screenshot or PDF. The receipt reader on CT100 fills in the lines (it uses the sync login, so set up sync first). If it can't read the receipt, tap Type it in. Check the lines and save. The receipt shows "In ledger" once the importer on CT100 has added it to the KAMOTec expense ledger, and after that it can't be edited. See `services/receipt-reader` and `services/ledger-importer`.
 - Measure opens the handrail site-measure page, which also works offline. It lists what to measure, takes the rise and run of each step, and lays out the posts and the shop cut list. Its jobs stay in that browser and don't sync, so use Export to keep a copy with the job.
 - Settings holds the business name, the default hourly rate (each job can have its own), the tax rate and the payment terms.
 

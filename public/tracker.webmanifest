@@ -1,6 +1,6 @@
 {
-  "name": "KAMOTec Hours",
-  "short_name": "Hours",
+  "name": "KAMO Services",
+  "short_name": "KAMO Services",
   "start_url": "./tracker.html",
   "scope": "./tracker",
   "display": "standalone",

@@ -31,11 +31,11 @@ export function Header({ currentPath, syncStatus }: HeaderProps) {
             className="flex items-center gap-2 text-lg font-bold tracking-tight text-ink hover:text-mark"
           >
             <span className="inline-block h-3.5 w-3.5 rounded-full bg-mark" />
-            <span>KAMOTec Hours</span>
+            <span>KAMO Services</span>
           </a>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div
             className="flex items-center gap-1.5 text-xs text-ink-2"
             title={syncStatus}
@@ -49,7 +49,7 @@ export function Header({ currentPath, syncStatus }: HeaderProps) {
             <a
               href="#/"
               className={`rounded px-2.5 py-1 text-sm font-medium transition-colors ${
-                isNavActive('#/') && !currentPath.startsWith('#/invoice') && !currentPath.startsWith('#/settings')
+                isNavActive('#/') && !currentPath.startsWith('#/invoice') && !currentPath.startsWith('#/receipt') && !currentPath.startsWith('#/settings')
                   ? 'bg-field text-ink'
                   : 'text-ink-2 hover:text-ink'
               }`}
@@ -65,6 +65,16 @@ export function Header({ currentPath, syncStatus }: HeaderProps) {
               }`}
             >
               Invoices
+            </a>
+            <a
+              href="#/receipts"
+              className={`rounded px-2.5 py-1 text-sm font-medium transition-colors ${
+                isNavActive('#/receipt')
+                  ? 'bg-field text-ink'
+                  : 'text-ink-2 hover:text-ink'
+              }`}
+            >
+              Receipts
             </a>
             <a
               href="handrail-measure.html"

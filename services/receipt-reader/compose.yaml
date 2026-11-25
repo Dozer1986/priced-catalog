@@ -1,0 +1,20 @@
+services:
+  receipt-reader:
+    build: .
+    image: kamo-receipt-reader
+    restart: unless-stopped
+    # host network: listens on 127.0.0.1:8446 and reaches CouchDB on 127.0.0.1:5984
+    network_mode: host
+    environment:
+      HOST: 127.0.0.1
+      PORT: "8446"
+      COUCH_URL: http://127.0.0.1:5984
+      KEY_FILE: /run/secrets/anthropic-api-key
+    volumes:
+      # create_host_path false: a missing key file fails the start instead of becoming an empty directory
+      - type: bind
+        source: /root/.config/kamo-services/anthropic-api-key
+        target: /run/secrets/anthropic-api-key
+        read_only: true
+        bind:
+          create_host_path: false

@@ -23,7 +23,7 @@ test('tracker: Aaron tracks hours and creates an invoice', async ({ page }) => {
 
   // Open the tracker page
   await page.goto('/priced-catalog/tracker.html');
-  await expect(page.getByText('KAMOTec Hours')).toBeVisible();
+  await expect(page.getByText('KAMO Services')).toBeVisible();
   await expect(page.getByText('Sync not set up')).toBeVisible();
 
   // Create job "Faucet swap" for "Pat Example"
@@ -306,6 +306,16 @@ test('tracker: on a phone the time entries fit the screen without sideways scrol
   expect(await sideways()).toBe(0);
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   expect(await sideways()).toBe(0);
+});
+
+test('tracker: on a phone the header fits the screen without sideways scrolling', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/priced-catalog/tracker.html#/receipts');
+  await expect(page.getByRole('link', { name: 'Settings' })).toBeVisible();
+  const sideways = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  expect(sideways).toBe(0);
 });
 
 test('tracker: an invoice with a few lines prints on one page', async ({ page }) => {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mergeEdits, sameData } from './merge';
-import type { EntryDoc } from './types';
+import type { EntryDoc, ReceiptDoc } from './types';
+import { newLine } from './receipt';
 
 const base: EntryDoc = {
   _id: 'entry:1',
@@ -68,5 +69,42 @@ describe('sameData', () => {
     const reordered = { minutes: 60, ...base, _rev: '3-other', _conflicts: ['3-x'] } as EntryDoc;
     expect(sameData(base, reordered)).toBe(true);
     expect(sameData(base, { ...base, minutes: 61 })).toBe(false);
+  });
+});
+
+describe('merge of two offline edits of one receipt', () => {
+  const base: ReceiptDoc = {
+    _id: 'receipt:1',
+    type: 'receipt',
+    status: 'confirmed',
+    date: '2026-11-10',
+    vendor: 'Menards',
+    storeCity: 'Evansville',
+    storeState: 'IN',
+    paidWith: 'Visa',
+    subtotalCents: 1000,
+    taxCents: 70,
+    totalCents: 1070,
+    notes: '',
+    lines: [newLine({ item: 'SCREWS', qty: 1, unitPriceCents: 1000, taxRate: 0.07, project: 'Smith' })],
+    createdAt: '2026-11-10T10:00:00Z',
+    updatedAt: '2026-11-10T10:00:00Z',
+  };
+  const phone = { ...base, vendor: 'Menards #3305', updatedAt: '2026-11-11T09:00:00Z' };
+  const laptop = {
+    ...base,
+    lines: [{ ...base.lines[0]!, category: 'Materials' }],
+    updatedAt: '2026-11-11T08:00:00Z',
+  };
+
+  it('keeps a header change from one side and the lines from the other', () => {
+    for (const [a, b] of [[phone, laptop], [laptop, phone]] as const) {
+      expect(mergeEdits(base, a, b)).toMatchObject({ vendor: 'Menards #3305', lines: laptop.lines });
+    }
+  });
+  it('takes the later save’s lines whole when both sides edited lines', () => {
+    const other = { ...base, lines: [{ ...base.lines[0]!, project: 'Jones' }], updatedAt: '2026-11-11T10:00:00Z' };
+    const merged = mergeEdits(base, laptop, other) as ReceiptDoc;
+    expect(merged.lines).toEqual(other.lines);
   });
 });

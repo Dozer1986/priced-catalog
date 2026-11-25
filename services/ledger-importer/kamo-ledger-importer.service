@@ -1,0 +1,13 @@
+[Unit]
+Description=Put confirmed KAMO Services receipts into the KAMOTec expense ledger
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+# Paths inside the container match the host paths, so the importer's defaults apply.
+ExecStart=/usr/bin/docker run --rm --name kamo-ledger-importer --network host \
+  -v /opt/docker/syncthing/data/Documents/KAMOTec:/opt/docker/syncthing/data/Documents/KAMOTec \
+  -v /opt/beihl-ai/obsidian-livesync/.env:/opt/beihl-ai/obsidian-livesync/.env:ro \
+  -v /opt/docker/syncthing/config/config.xml:/opt/docker/syncthing/config/config.xml:ro \
+  kamo-ledger-importer

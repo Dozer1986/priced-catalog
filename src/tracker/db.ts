@@ -6,6 +6,8 @@ import type {
   JobDoc,
   EntryDoc,
   InvoiceDoc,
+  ReceiptDoc,
+  ListsDoc,
   SyncCredentials,
 } from './types';
 import { getLocalDateString } from './billing';
@@ -205,7 +207,8 @@ async function mergeConflicts(id: string): Promise<void> {
   // Skip a no-op save: two devices merging at once would otherwise make a new conflict every round
   if (!sameData(merged, winner)) {
     try {
-      await db.put({ ...merged, _rev: winner._rev });
+      // _attachments is not data to merge, but a put without it would delete the receipt photo
+      await db.put({ ...merged, _attachments: winner._attachments, _rev: winner._rev });
     } catch (err: unknown) {
       if ((err as { status?: number }).status === 409) return; // changed meanwhile; that change merges again
       throw err;
@@ -319,6 +322,8 @@ export function useTrackerData() {
   const jobs = all.filter((d): d is JobDoc => d.type === 'job');
   const entries = all.filter((d): d is EntryDoc => d.type === 'entry');
   const invoices = all.filter((d): d is InvoiceDoc => d.type === 'invoice');
+  const receipts = all.filter((d): d is ReceiptDoc => d.type === 'receipt');
+  const lists = all.find((d): d is ListsDoc => d._id === 'lists' && d.type === 'lists');
 
   return {
     loaded: docs !== null,
@@ -326,6 +331,8 @@ export function useTrackerData() {
     jobs,
     entries,
     invoices,
+    receipts,
+    lists,
     syncStatus,
   };
 }

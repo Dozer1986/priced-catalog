@@ -252,7 +252,10 @@ export function start(s) {
 function importOldJobs() {
   const KEY = 'handrail-measure-v1', raw = localStorage.getItem(KEY);
   if (!raw) return;
-  for (const p of JSON.parse(raw).projects ?? []) create(p);
+  for (const p of JSON.parse(raw).projects ?? []) {
+    if (p.name === 'Example job' && !p.flights?.length) continue;
+    create(p);
+  }
   localStorage.setItem(`${KEY}-imported`, raw);
   localStorage.removeItem(KEY);
 }

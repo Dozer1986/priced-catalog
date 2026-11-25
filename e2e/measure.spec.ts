@@ -80,7 +80,9 @@ test('measure: a job saved by the old localStorage-only page shows up once', asy
     const project = { name: 'Old phone job', site: 'Lake lot', date: '2026-11-01', width: '', inset: '', notes: '',
       settings: { H: '36', lo: '34', hi: '38', span: '72', back: '2-3/4', tail: '2-3/4', railH: '1-1/2', plate: '3/8', bracket: false, stack: '', trim: '1/2' },
       flights: [{ name: 'Flight 1', steps, totRise: '', totRun: '', notes: '' }] };
-    localStorage.setItem('handrail-measure-v1', JSON.stringify({ cur: 0, projects: [project] }));
+    // The old page made a blank 'Example job' on first open; it is not worth syncing
+    const example = { ...project, name: 'Example job', site: '', flights: [] };
+    localStorage.setItem('handrail-measure-v1', JSON.stringify({ cur: 0, projects: [example, project] }));
   });
 
   await page.reload();

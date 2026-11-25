@@ -47,6 +47,8 @@ interface Draft {
 
 const blankLine: LineDraft = { item: '', description: '', sku: '', qty: '1', unitPrice: '', taxPct: '', category: '', project: '', billable: true };
 
+const blankDraft: Draft = { date: '', vendor: '', storeCity: '', storeState: '', paidWith: '', subtotal: '', tax: '', total: '', notes: '', lines: [blankLine] };
+
 const money = (cents: number | null) => (cents === null ? '' : (cents / 100).toFixed(2));
 
 function toDraft(f: ReceiptFields): Draft {
@@ -74,6 +76,7 @@ function fromDraft(d: Draft): ReceiptFields | string {
   if (subtotalCents === undefined || taxCents === undefined || totalCents === undefined) {
     return 'Subtotal, tax and total must be amounts like 12.34, or blank.';
   }
+  if (d.lines.length === 0) return 'Add at least one line.';
   const lines = [];
   for (const [i, l] of d.lines.entries()) {
     const qty = parseNumber(l.qty);
@@ -134,6 +137,7 @@ export function ReceiptScreen({ receiptId, receipts, lists }: ReceiptScreenProps
   const handleFile = async (picked: File | undefined) => {
     if (!picked) return;
     setError('');
+    setFile(null);
     setReading(true);
     try {
       const prepared = await prepareFile(picked);
@@ -230,6 +234,18 @@ export function ReceiptScreen({ receiptId, receipts, lists }: ReceiptScreenProps
               Choose a screenshot or PDF
               <input type="file" accept="image/*,application/pdf" className="sr-only" onChange={(e) => handleFile(e.target.files?.[0])} />
             </label>
+            {file && (
+              <button
+                type="button"
+                onClick={() => {
+                  setError('');
+                  setDraft(blankDraft);
+                }}
+                className="flex min-h-[44px] w-full items-center justify-center rounded border border-rule bg-field px-4 py-2 text-sm font-medium text-ink hover:border-ink-2"
+              >
+                Type it in
+              </button>
+            )}
           </div>
         )}
       </div>

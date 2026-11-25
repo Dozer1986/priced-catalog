@@ -1,7 +1,7 @@
 # receipt-reader
 
 Reads a receipt photo or PDF with Claude (`claude-opus-5-5`, structured output) for the KAMO Services app.
-`POST /extract` takes the file as the raw body (or a multipart form) with the app's CouchDB Basic login;
+`POST /extract` takes the file as the raw body with the app's CouchDB Basic login;
 only user `kamotec` gets past the login check, which runs before any Claude call. `GET /health` reports
 `{"ok": true, "key": <API key loaded>}`. CORS allows only `https://dozer1986.github.io`.
 

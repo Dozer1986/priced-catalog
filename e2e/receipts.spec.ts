@@ -51,3 +51,31 @@ test('receipts: read a photo, check the lines, save', async ({ page }) => {
   await expect(page.getByLabel('Category').first()).toHaveValue('Tools');
   await expect(page.getByLabel('Qty').nth(1)).toHaveValue('-1');
 });
+
+test('receipts: type it in when the reader fails', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('kamotec_sync_creds', JSON.stringify({ url: 'http://127.0.0.1:59999/kamotec-time', username: 'kamotec', password: 'pw' }));
+  });
+  await page.route('http://127.0.0.1:8446/extract', (route) =>
+    route.fulfill({ status: 503, json: { error: 'The receipt reader has no Anthropic API key.' }, headers: { 'Access-Control-Allow-Origin': '*' } }),
+  );
+
+  await page.goto('/priced-catalog/tracker.html#/receipt/new');
+  await page.locator('input[type=file]:not([capture])').setInputFiles({ name: 'r.png', mimeType: 'image/png', buffer: PNG });
+  await page.getByRole('button', { name: 'Type it in' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Check the receipt' })).toBeVisible();
+  await page.getByLabel('Date').fill('2026-11-15');
+  await page.getByLabel('Vendor').fill('Lowes');
+  await page.getByRole('button', { name: 'Delete' }).click();
+  await page.getByRole('button', { name: 'Save receipt' }).click();
+  await expect(page.getByText('Add at least one line.')).toBeVisible();
+
+  await page.getByRole('button', { name: '+ Add line' }).click();
+  await page.getByLabel('Unit price ($)').fill('3.50');
+  await page.getByLabel('Tax (%)').fill('7');
+  await page.getByRole('button', { name: 'Save receipt' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Receipts' })).toBeVisible();
+  await expect(page.getByText('Lowes')).toBeVisible();
+});

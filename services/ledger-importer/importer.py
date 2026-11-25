@@ -377,11 +377,6 @@ def run(args):
         else:
             return 0  # quiet: try again next run
     folder = os.path.dirname(os.path.abspath(args.ledger))
-    if not args.dry_run:
-        stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-        shutil.copy2(args.ledger, os.path.join(folder, f".{os.path.basename(args.ledger)}.bak-{stamp}"))
-        for old in sorted(glob.glob(os.path.join(folder, f".{glob.escape(os.path.basename(args.ledger))}.bak-*")))[:-KEEP_BACKUPS]:
-            os.remove(old)
     mtime = os.stat(args.ledger).st_mtime_ns
 
     office = Office()
@@ -390,8 +385,11 @@ def run(args):
         next_row = last_used_row(doc.Sheets.getByName("Expenses")) + 1
         taken, done = set(), []
         for r in receipts:
-            att_name, data = couch.attachment(r)
             rows = ledger_rows(r)
+            if not rows:
+                log(f"{r['_id']}: left out of the ledger: it has no lines")
+                continue
+            att_name, data = couch.attachment(r)
             year_dir = os.path.join(folder, "Receipts", r["date"][:4])
             name = photo_name(r, att_name, year_dir, taken) if att_name else None
             if next_row + len(rows) - 1 > LAST_ROW:
@@ -422,6 +420,10 @@ def run(args):
             log("the ledger changed while importing; trying again next run")
             doc.close(True)
             return 0
+        stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
+        shutil.copy2(args.ledger, os.path.join(folder, f".{os.path.basename(args.ledger)}.bak-{stamp}"))
+        for old in sorted(glob.glob(os.path.join(folder, f".{glob.escape(os.path.basename(args.ledger))}.bak-*")))[:-KEEP_BACKUPS]:
+            os.remove(old)
         doc.store()
         doc.close(True)
     finally:

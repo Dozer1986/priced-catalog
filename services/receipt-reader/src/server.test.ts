@@ -104,12 +104,11 @@ describe('receipt reader', () => {
     reader.close();
   });
 
-  it('takes a PDF from a multipart form as a document block', async () => {
+  it('takes a PDF as a document block', async () => {
     const parse = vi.fn().mockResolvedValue({ model: 'm', stop_reason: 'end_turn', usage: {}, parsed_output: fixture });
     const reader = await startReader(parse);
-    const form = new FormData();
-    form.append('file', new Blob(['%PDF-1.4'], { type: 'application/pdf' }), 'r.pdf');
-    const res = await fetch(`${reader.url}/extract`, { method: 'POST', headers: { Authorization: GOOD }, body: form });
+    const pdf = { method: 'POST', headers: { 'Content-Type': 'application/pdf', Authorization: GOOD }, body: Buffer.from('%PDF-1.4') };
+    const res = await fetch(`${reader.url}/extract`, pdf);
     expect(res.status).toBe(200);
     expect(parse.mock.calls[0]![0].messages[0].content[0]).toMatchObject({ type: 'document', source: { media_type: 'application/pdf' } });
     reader.close();

@@ -39,15 +39,9 @@ async function readBody(req: http.IncomingMessage): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-/** The uploaded file and its type, from a raw body or the first file of a multipart form. */
+/** The uploaded file (the raw body) and its type. */
 async function readUpload(req: http.IncomingMessage): Promise<{ type: string; data: Buffer }> {
-  const body = await readBody(req);
-  const contentType = req.headers['content-type'] ?? '';
-  if (!contentType.startsWith('multipart/form-data')) return { type: contentType.split(';')[0]!.trim(), data: body };
-  const form = await new Request('http://local/', { method: 'POST', headers: { 'content-type': contentType }, body }).formData();
-  const file = [...form.values()].find((v): v is File => typeof v !== 'string');
-  if (!file) throw new HttpError(400, 'The form has no file in it.');
-  return { type: file.type, data: Buffer.from(await file.arrayBuffer()) };
+  return { type: (req.headers['content-type'] ?? '').split(';')[0]!.trim(), data: await readBody(req) };
 }
 
 function contentBlock(type: string, data: string): Anthropic.Beta.BetaContentBlockParam {

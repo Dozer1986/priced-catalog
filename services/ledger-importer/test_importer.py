@@ -69,7 +69,7 @@ def add_receipt(couch, n, project="Smith's", date="2026-11-14", lines=None):
         "_id": f"receipt:{n}", "type": "receipt", "status": "confirmed", "createdAt": f"2026-11-20T10:00:0{n}Z",
         "date": date, "vendor": "Menards", "storeCity": "Carmel", "storeState": "IN", "paidWith": "Visa 6270",
         "subtotalCents": 1500, "taxCents": 105, "totalCents": 1605, "notes": "Date from the return slip.",
-        "lines": lines or [
+        "lines": lines if lines is not None else [
             {"item": "SCREWS 50CT", "description": "Screws", "sku": "2302134", "qty": 2, "unitPriceCents": 1000,
              "taxRate": 0.07, "category": "Fasteners & Anchors", "project": project, "billable": True},
             {"item": "RTN SILL", "description": "Return: sill", "sku": "", "qty": -1, "unitPriceCents": 500,
@@ -123,6 +123,27 @@ def test_ledger_saved_meanwhile_means_no_write(setup, monkeypatch):
     assert (folder / LEDGER).read_bytes() == content
     assert "importedAt" not in couch.get("receipt:1")
     assert not list((folder / "Receipts" / "2026").iterdir())
+    assert not list(folder.glob(".*.bak-*"))
+
+
+def test_receipt_with_no_lines_is_left_out_and_others_go_in(setup, capsys):
+    folder, couch, args = setup
+    add_receipt(couch, 1, lines=[])
+    add_receipt(couch, 2)
+    importer.main(args)
+    assert "importedAt" not in couch.get("receipt:1")
+    assert couch.get("receipt:2")["importedAt"]
+    assert "receipt:1: left out of the ledger: it has no lines" in capsys.readouterr().out
+
+
+def test_nothing_to_save_means_no_backup(setup):
+    folder, couch, args = setup
+    add_receipt(couch, 1, project="Not on the Lists sheet")
+    before = snapshot(folder)
+    importer.main(args)
+    assert snapshot(folder) == before
+    assert "importedAt" not in couch.get("receipt:1")
+    assert not list(folder.glob(".*.bak-*"))
 
 
 def read_ledger(path):

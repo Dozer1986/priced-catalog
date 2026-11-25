@@ -223,6 +223,18 @@ async function mergeConflicts(id: string): Promise<void> {
 
 let merging: Promise<void> = Promise.resolve();
 
+/** Merges every doc in `rows` (read with `conflicts: true`) that has offline edits from another device. */
+export function mergeConflictRows(rows: PouchDB.Core.AllDocsResponse<TrackerDoc>['rows']): void {
+  for (const row of rows) {
+    if (row.doc?._conflicts) {
+      // One at a time; the merge's own save brings the next reload.
+      merging = merging
+        .then(() => mergeConflicts(row.id))
+        .catch((err: unknown) => console.error('Merging offline edits failed', err));
+    }
+  }
+}
+
 /**
  * Deletes a document by ID.
  */
@@ -295,13 +307,8 @@ export function useTrackerData() {
       if (row.doc && 'type' in row.doc) {
         loaded.push(row.doc as unknown as TrackerDoc);
       }
-      if (row.doc?._conflicts) {
-        // One at a time; the merge's own save brings the next reload.
-        merging = merging
-          .then(() => mergeConflicts(row.id))
-          .catch((err: unknown) => console.error('Merging offline edits failed', err));
-      }
     }
+    mergeConflictRows(res.rows);
     setDocs(loaded);
   }, []);
 

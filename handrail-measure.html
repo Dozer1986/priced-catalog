@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0a0e14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<link rel="manifest" href="./tracker.webmanifest">
+<title>Handrail Measure · KAMO Services</title>
+<style>
+:root{color-scheme:dark;--ink:#e8edf2;--ink-2:#b0bec5;--paper:#0a0e14;--field:#151b24;--rule:#5a6a7e;--mark:#00e5a0;--on-mark:#0a0e14}
+@media print{:root{color-scheme:light;--ink:#000;--ink-2:#444;--paper:#fff;--field:#fff;--rule:#999}}
+body{font:15px/1.4 system-ui,sans-serif;margin:0;background:var(--paper);color:var(--ink)}
+header{background:var(--paper);color:var(--ink);border-bottom:1px solid var(--rule);padding:10px 12px;position:sticky;top:0;z-index:2}
+header h1{font-size:17px;margin:0 0 6px}
+header select,header button{font-size:14px;margin:2px 2px 2px 0}
+main{padding:10px;max-width:900px;margin:auto}
+section{background:var(--field);border-radius:8px;padding:10px 12px;margin:0 0 12px;border:1px solid var(--rule)}
+h2{font-size:16px;margin:4px 0 8px}h3{font-size:15px;margin:10px 0 4px}
+label{display:inline-block;margin:3px 10px 3px 0}
+input{font-size:15px;padding:4px;width:6.5em;border:1px solid var(--rule);border-radius:4px;background:var(--paper);color:var(--ink)}
+input.wide{width:14em}input[type=checkbox]{width:auto;transform:scale(1.4)}
+table{border-collapse:collapse;width:100%;margin:6px 0}
+td,th{border-bottom:1px solid var(--rule);padding:4px;text-align:left;vertical-align:middle}
+th{background:var(--paper);color:var(--ink-2);font-size:13px}
+td input{width:5.5em}
+input.badin{border:2px solid #ff6b6b;background:#3a1416}
+.bad{color:#ff6b6b;font-weight:600}.ok{color:var(--mark)}.muted{color:var(--ink-2);font-size:13px}
+button{font-size:14px;padding:5px 9px;border-radius:5px;border:1px solid var(--rule);background:var(--field);color:var(--ink)}
+button:disabled{opacity:.4}select{font-size:15px;padding:4px;background:var(--paper);color:var(--ink);border:1px solid var(--rule);border-radius:4px}
+button.del{color:#ff6b6b}
+.tabs button{margin-right:4px}.tabs button.on{background:var(--mark);color:var(--on-mark);border-color:var(--mark)}
+ol li{margin:4px 0}
+svg{width:100%;height:auto;background:var(--paper);border:1px solid var(--rule)}
+svg text:not([fill]){fill:var(--ink-2)}
+@media print{header,.noprint{display:none}section{box-shadow:none;break-inside:avoid}input{border:none}}
+</style></head><body>
+<header>
+  <h1><a href="tracker.html" style="color:var(--mark);text-decoration:none;padding-right:10px">&lsaquo; KAMO Services</a>Handrail Site Measure</h1>
+  <select id="proj"></select>
+  <button onclick="newProject()">New</button>
+  <button class="needjob" onclick="dupProject()">Copy</button>
+  <button class="needjob" onclick="exportJSON()">Export</button>
+  <button onclick="document.getElementById('imp').click()">Import</button>
+  <input id="imp" type="file" accept=".json" hidden onchange="importJSON(this.files[0])">
+  <button class="needjob" onclick="window.print()">Print</button> <button class="needjob del" onclick="delProject()">Delete</button> <span id="sync" class="muted"></span>
+  <div class="tabs"><button data-t="guide">1 What to measure</button><button data-t="data">2 Enter</button><button data-t="cut">3 Shop cut list</button></div>
+</header>
+<main id="app"></main>
+<script type="module" src="/src/measure/main.ts"></script>
+</body></html>

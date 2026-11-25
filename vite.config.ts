@@ -92,6 +92,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         sources: resolve(__dirname, 'sources.html'),
         tracker: resolve(__dirname, 'tracker.html'),
+        measure: resolve(__dirname, 'handrail-measure.html'),
       },
     },
   },

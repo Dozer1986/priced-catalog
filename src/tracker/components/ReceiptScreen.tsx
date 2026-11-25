@@ -119,6 +119,8 @@ export function ReceiptScreen({ receiptId, receipts, lists }: ReceiptScreenProps
   // What the form started from; a save writes only the fields that differ from it
   const [saved, setSaved] = useState<ReceiptFields | null>(() => (receipt ? (fromDraft(toDraft(receipt)) as ReceiptFields) : null));
   const [draft, setDraft] = useState<Draft | null>(() => (saved ? toDraft(saved) : null));
+  // One id per new receipt, so a second tap on Save rewrites it instead of making a duplicate
+  const [newId] = useState(() => `receipt:${crypto.randomUUID()}` as const);
   const [file, setFile] = useState<{ blob: Blob; ext: string } | null>(null);
   const [reading, setReading] = useState(false);
   const [error, setError] = useState('');
@@ -156,7 +158,7 @@ export function ReceiptScreen({ receiptId, receipts, lists }: ReceiptScreenProps
     if (!receipt) {
       if (!file) return;
       const doc: ReceiptDoc = {
-        _id: `receipt:${crypto.randomUUID()}`,
+        _id: newId,
         type: 'receipt',
         status: 'confirmed',
         createdAt: new Date().toISOString(),

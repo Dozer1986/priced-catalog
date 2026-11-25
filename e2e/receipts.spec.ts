@@ -43,10 +43,10 @@ test('receipts: read a photo, check the lines, save', async ({ page }) => {
   await page.getByLabel('Category').first().fill('Tools'); // free text: no lists doc yet
   await expect(page.getByLabel('Billable').first()).toHaveValue('No');
   await page.getByLabel('Project').first().fill('Smith');
-  await page.getByRole('button', { name: 'Save receipt' }).click();
+  await page.getByRole('button', { name: 'Save receipt' }).dblclick();
 
   await expect(page.getByRole('heading', { name: 'Receipts' })).toBeVisible();
-  await expect(page.getByText('Waiting for ledger')).toBeVisible();
+  await expect(page.getByText('Waiting for ledger')).toHaveCount(1); // the double click saved one receipt
   await page.getByText('Menards').click();
   await expect(page.getByLabel('Category').first()).toHaveValue('Tools');
   await expect(page.getByLabel('Qty').nth(1)).toHaveValue('-1');

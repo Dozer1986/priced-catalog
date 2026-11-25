@@ -427,6 +427,8 @@ def run(args):
     finally:
         office.close()
 
+    # shortcut: a crash between the ledger save and marking the receipt imports it again next run; fine for one
+    # user every 5 minutes, check the ledger for the receipt's rows first if duplicates ever show up
     for r, rows, name, data, year_dir in done:
         if name:
             os.makedirs(year_dir, exist_ok=True)

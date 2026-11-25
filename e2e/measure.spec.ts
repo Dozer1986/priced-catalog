@@ -70,3 +70,24 @@ test('measure: enter a flight on the phone, get checks and a cut list, survive a
   await page.getByRole('link', { name: /KAMO Services/ }).click();
   await expect(page).toHaveTitle('KAMO Services');
 });
+
+test('measure: a job saved by the old localStorage-only page shows up once', async ({ page }) => {
+  await page.goto('/priced-catalog/handrail-measure.html');
+  await expect(page.getByText('No measure jobs yet')).toBeVisible();
+  // The format the page used before sync (PR #4): { cur, projects } under 'handrail-measure-v1'
+  await page.evaluate(() => {
+    const steps = [...Array(12)].map((_, i) => ({ rise: '5-5/8', run: i ? '19-7/8' : '', post: null, note: '' }));
+    const project = { name: 'Old phone job', site: 'Lake lot', date: '2026-11-01', width: '', inset: '', notes: '',
+      settings: { H: '36', lo: '34', hi: '38', span: '72', back: '2-3/4', tail: '2-3/4', railH: '1-1/2', plate: '3/8', bracket: false, stack: '', trim: '1/2' },
+      flights: [{ name: 'Flight 1', steps, totRise: '', totRun: '', notes: '' }] };
+    localStorage.setItem('handrail-measure-v1', JSON.stringify({ cur: 0, projects: [project] }));
+  });
+
+  await page.reload();
+  await page.getByRole('button', { name: '2 Enter' }).click();
+  await expect(page.locator('select#proj option')).toHaveText(['Old phone job']);
+  await expect(page.getByText(/Slope 15\.8°/)).toBeVisible();
+
+  await page.reload();
+  await expect(page.locator('select#proj option')).toHaveText(['Old phone job']);
+});

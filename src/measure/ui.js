@@ -32,7 +32,7 @@ function create(fields) {
   const doc = { name: 'New handrail job', site: '', date: today(), jobId: '', width: '', inset: '', notes: '', flights: [],
                 ...fields, settings: { ...DEFAULT_SETTINGS, ...fields.settings },
                 _id: `measure:${crypto.randomUUID()}`, type: 'measure', createdAt: new Date().toISOString() };
-  delete doc._rev; delete doc.updatedAt;
+  delete doc._rev; delete doc.updatedAt; delete doc._conflicts;
   docs.push(doc); setCur(doc._id); render();
   track(() => store.save(doc._id, () => doc));
 }
@@ -245,4 +245,14 @@ export function start(s) {
     if (pending && !document.activeElement?.matches('input, select')) render();
   }));
   s.onSyncStatus(t => { document.getElementById('sync').textContent = t; });
+  importOldJobs();
+}
+
+/** The page before sync kept its jobs in this phone's localStorage; move them into the database once. */
+function importOldJobs() {
+  const KEY = 'handrail-measure-v1', raw = localStorage.getItem(KEY);
+  if (!raw) return;
+  for (const p of JSON.parse(raw).projects ?? []) create(p);
+  localStorage.setItem(`${KEY}-imported`, raw);
+  localStorage.removeItem(KEY);
 }

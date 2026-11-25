@@ -1,4 +1,4 @@
-import { db, saveDoc, removeDoc, subscribeSyncStatus } from '../tracker/db';
+import { db, saveDoc, removeDoc, subscribeSyncStatus, mergeConflictRows } from '../tracker/db';
 import type { JobDoc, MeasureDoc } from '../tracker/types';
 import { start, update } from './ui.js';
 
@@ -15,8 +15,9 @@ window.addEventListener('unhandledrejection', (e) => {
 
 async function reload() {
   const [measures, jobs] = await Promise.all(
-    ['measure:', 'job:'].map((p) => db.allDocs({ include_docs: true, startkey: p, endkey: `${p}￰` })),
+    ['measure:', 'job:'].map((p) => db.allDocs({ include_docs: true, conflicts: true, startkey: p, endkey: `${p}￰` })),
   );
+  mergeConflictRows([...measures!.rows, ...jobs!.rows]);
   update(
     measures!.rows.map((r) => r.doc as unknown as MeasureDoc),
     jobs!.rows.map((r) => r.doc as unknown as JobDoc),

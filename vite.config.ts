@@ -14,6 +14,7 @@ function trackerServiceWorkerPlugin(): Plugin {
       }
       emittedFiles.add('tracker.html');
       emittedFiles.add('tracker.webmanifest');
+      emittedFiles.add('handrail-measure.html');
       emittedFiles.add('icon-180.png');
       emittedFiles.add('icon-192.png');
       emittedFiles.add('icon-512.png');

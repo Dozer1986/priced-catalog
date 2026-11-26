@@ -2,7 +2,8 @@
 
 Reads a receipt photo or PDF with Claude (`claude-opus-5-5`, structured output) for the KAMO Services app.
 `POST /extract` takes the file as the raw body with the app's CouchDB Basic login;
-only user `kamotec` gets past the login check, which runs before any Claude call. `GET /health` reports
+only user `kamotec` gets past the login check, which runs before any Claude call. After 30 calls in an hour it
+answers 429 until the oldest of them is an hour old. `GET /health` reports
 `{"ok": true, "key": <API key loaded>}`. CORS allows only `https://dozer1986.github.io`.
 
 The API key is read at startup from `/root/.config/kamo-services/anthropic-api-key` (`KEY_FILE`). The container runs as

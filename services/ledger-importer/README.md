@@ -10,6 +10,10 @@ It edits the ledger in place with LibreOffice (so receipt links stay relative), 
 and every new row's Total and the Summary total check out; a receipt that fails the check (usually a project
 missing from the Lists sheet) is left out and logged, and the others still go in.
 
+It logs in to CouchDB as `kamo-importer`, a member of `kamotec-time` only (no other database, no admin).
+Its login is `/root/.config/kamo-services/importer-couch.env` (`COUCHDB_USER=`/`COUCHDB_PASSWORD=`, mode 600).
+The tests below still use the admin login, because they create and delete a throwaway database.
+
     docker build -t kamo-ledger-importer .
     docker run --rm --network host ... kamo-ledger-importer --dry-run   # see kamo-ledger-importer.service for the mounts
 

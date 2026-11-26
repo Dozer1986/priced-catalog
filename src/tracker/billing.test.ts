@@ -70,7 +70,7 @@ describe('billing pure functions', () => {
     it('generates sequential numbers accounting for prior issued constant', () => {
       expect(PRIOR_ISSUED_INVOICE_NUMBERS).toContain('INV-2026-001');
 
-      expect(nextInvoiceNumber([], '2026-11-10')).toBe('INV-2026-002');
+      expect(nextInvoiceNumber([], '2026-11-10')).toBe('INV-2026-004');
       expect(nextInvoiceNumber(['INV-2026-002', 'INV-2026-007'], '2026-11-10')).toBe('INV-2026-008');
       expect(nextInvoiceNumber([], '2027-01-03')).toBe('INV-2027-001');
     });

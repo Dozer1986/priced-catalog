@@ -12,4 +12,6 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
+# the key file is bind-mounted read-only; on the host it must be readable by uid 1000 (README)
+USER node
 CMD ["node", "dist/main.js"]

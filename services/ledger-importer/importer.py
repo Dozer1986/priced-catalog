@@ -158,7 +158,8 @@ def lock_path(ledger):
 
 def syncthing_settled(url, config_xml, folder, device_name):
     """True when the laptop has all of the folder and CT100 has nothing left to pull or scan."""
-    config = ET.parse(config_xml).getroot()
+    # Syncthing's own config.xml (root 0600 on CT100), not untrusted input
+    config = ET.parse(config_xml).getroot()  # nosemgrep: python.lang.security.use-defused-xml-parse.use-defused-xml-parse
     key = config.findtext("gui/apikey")
     device = next((d.get("id") for d in config.iter("device") if d.get("name") == device_name), None)
     if not device:

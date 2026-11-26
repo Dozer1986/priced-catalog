@@ -1,6 +1,6 @@
 import type { InvoiceLineItem, InvoiceTotals } from './types';
 
-export const PRIOR_ISSUED_INVOICE_NUMBERS: readonly string[] = ['INV-2026-001', 'INV-2026-002', 'INV-2026-003']; // issued outside the app (Jan, Smith, David)
+export const PRIOR_ISSUED_INVOICE_NUMBERS: readonly string[] = ['INV-2026-001', 'INV-2026-002', 'INV-2026-003']; // issued outside the app
 
 /**
  * Rounds duration in minutes to billable hours (nearest 15 minutes = 0.25 h).

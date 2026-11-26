@@ -207,9 +207,9 @@ test('tracker: a second quick Save makes no duplicate invoice, and a reload keep
   await page.getByRole('button', { name: 'Add time' }).click();
   await page.getByRole('link', { name: 'Create invoice' }).click();
   await page.reload();
-  // INV-2026-001 was issued before the app, so 2026 starts at 002; later years start at 001.
+  // INV-2026-001 to 003 were issued before the app, so 2026 starts at 004; later years start at 001.
   const year = new Date().getFullYear();
-  await expect(page.getByLabel('Invoice Number')).toHaveValue(year === 2026 ? 'INV-2026-003' : `INV-${year}-002`);
+  await expect(page.getByLabel('Invoice Number')).toHaveValue(year === 2026 ? 'INV-2026-005' : `INV-${year}-002`);
   await expect(page.getByRole('checkbox')).toBeChecked();
 });
 

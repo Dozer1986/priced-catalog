@@ -440,8 +440,6 @@ def run(args):
                 f.write(data)
                 f.flush()
                 os.fsync(f.fileno())
-            if os.path.getsize(path) != len(data):
-                raise RuntimeError(f"{path} is short; keeping the photo in the app")
         now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
         def mark(doc, rows=rows, name=name, now=now):

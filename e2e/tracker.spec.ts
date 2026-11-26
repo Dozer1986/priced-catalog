@@ -397,3 +397,41 @@ test('tracker: changing only the date of a timer entry keeps its exact minutes a
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect.poll(stored).toEqual({ ...before, date: '2026-01-02' });
 });
+
+test('tracker: a quote with labor and materials shows its estimated total and can be accepted', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (err) => errors.push(err.message));
+  await newJobWithHour(page, 'Panel swap');
+  await page.getByRole('link', { name: 'New quote' }).click();
+  await expect(page.getByRole('heading', { name: 'New Quote' })).toBeVisible();
+  await page.getByLabel('Scope of work').fill('Replace the main panel.');
+  await page.getByRole('button', { name: '+ Add Labor' }).click();
+  await page.getByLabel('Labor task').fill('Swap the panel');
+  await page.getByLabel('Estimated hours').fill('2:30');
+  await page.getByRole('button', { name: '+ Add Materials' }).click();
+  await page.getByPlaceholder('Description').fill('Breakers');
+  await page.locator('input[type="number"][min="1"]').fill('2');
+  await page.getByPlaceholder('0.00').fill('12.50');
+  await page.getByRole('button', { name: 'Save quote' }).click();
+
+  // $250 labor + $25 materials + 7% tax on the materials
+  const sheet = page.locator('.invoice-sheet');
+  await expect(sheet).toContainText('Prepared for');
+  await expect(sheet).toContainText('Pricing valid through');
+  await expect(sheet.locator('.row.grand')).toContainText('Estimated total');
+  await expect(sheet.locator('.row.grand')).toContainText('$276.75');
+
+  // Editing the draft keeps the lines it did not touch
+  await page.getByRole('link', { name: 'Edit quote' }).click();
+  await page.getByLabel('Scope of work').fill('Replace the main panel and label it.');
+  await page.getByRole('button', { name: 'Save quote' }).click();
+  await expect(sheet).toContainText('and label it.');
+  await expect(sheet.locator('.row.grand')).toContainText('$276.75');
+
+  await page.getByRole('button', { name: 'Mark accepted' }).click();
+  await expect(page.getByText('Status: accepted')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Edit quote' })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Quotes', exact: true }).click();
+  await expect(page.getByRole('row', { name: /Q-\d{4}-001/ })).toContainText('accepted');
+  expect(errors).toEqual([]);
+});

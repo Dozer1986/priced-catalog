@@ -45,11 +45,11 @@ export function Header({ currentPath, syncStatus }: HeaderProps) {
             <span className="truncate max-w-[200px] sm:max-w-none">{syncStatus}</span>
           </div>
 
-          <nav className="flex items-center gap-1">
+          <nav className="flex flex-wrap items-center gap-1">
             <a
               href="#/"
               className={`rounded px-2.5 py-1 text-sm font-medium transition-colors ${
-                isNavActive('#/') && !currentPath.startsWith('#/invoice') && !currentPath.startsWith('#/receipt') && !currentPath.startsWith('#/settings')
+                isNavActive('#/') && !currentPath.startsWith('#/invoice') && !currentPath.startsWith('#/quote') && !currentPath.startsWith('#/receipt') && !currentPath.startsWith('#/settings')
                   ? 'bg-field text-ink'
                   : 'text-ink-2 hover:text-ink'
               }`}
@@ -65,6 +65,16 @@ export function Header({ currentPath, syncStatus }: HeaderProps) {
               }`}
             >
               Invoices
+            </a>
+            <a
+              href="#/quotes"
+              className={`rounded px-2.5 py-1 text-sm font-medium transition-colors ${
+                isNavActive('#/quote')
+                  ? 'bg-field text-ink'
+                  : 'text-ink-2 hover:text-ink'
+              }`}
+            >
+              Quotes
             </a>
             <a
               href="#/receipts"

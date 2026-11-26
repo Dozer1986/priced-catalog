@@ -6,6 +6,9 @@ import { JobScreen } from './components/JobScreen';
 import { InvoiceNewScreen } from './components/InvoiceNewScreen';
 import { InvoiceViewScreen } from './components/InvoiceViewScreen';
 import { InvoicesListScreen } from './components/InvoicesListScreen';
+import { QuoteNewScreen } from './components/QuoteNewScreen';
+import { QuoteViewScreen } from './components/QuoteViewScreen';
+import { QuotesListScreen } from './components/QuotesListScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { ReceiptsListScreen } from './components/ReceiptsListScreen';
 import { ReceiptScreen } from './components/ReceiptScreen';
@@ -18,12 +21,16 @@ interface ParsedRoute {
     | 'invoice-new'
     | 'invoice-detail'
     | 'invoices'
+    | 'quote-new'
+    | 'quote-detail'
+    | 'quotes'
     | 'settings'
     | 'receipts'
     | 'receipt';
   jobId?: string;
   receiptId?: string;
   invoiceId?: string;
+  quoteId?: string;
 }
 
 function parseHash(hash: string): ParsedRoute {
@@ -50,6 +57,17 @@ function parseHash(hash: string): ParsedRoute {
   if (clean === '/invoices') {
     return { view: 'invoices' };
   }
+  if (clean.startsWith('/quote/new')) {
+    const params = new URLSearchParams(clean.includes('?') ? clean.slice(clean.indexOf('?')) : '');
+    return { view: 'quote-new', jobId: params.get('job') || '' };
+  }
+  if (clean.startsWith('/quote/')) {
+    const [id, edit] = clean.slice('/quote/'.length).split('?')[0]!.split('/');
+    return { view: edit === 'edit' ? 'quote-new' : 'quote-detail', quoteId: id };
+  }
+  if (clean === '/quotes') {
+    return { view: 'quotes' };
+  }
   if (clean === '/receipts') {
     return { view: 'receipts' };
   }
@@ -64,7 +82,7 @@ function parseHash(hash: string): ParsedRoute {
 }
 
 export function TrackerApp() {
-  const { loaded, settings, jobs, entries, invoices, receipts, lists, syncStatus } = useTrackerData();
+  const { loaded, settings, jobs, entries, invoices, quotes, receipts, lists, syncStatus } = useTrackerData();
   const [hash, setHash] = useState(() => window.location.hash || '#/');
 
   useEffect(() => {
@@ -130,6 +148,24 @@ export function TrackerApp() {
         {route.view === 'invoices' && (
           <InvoicesListScreen invoices={invoices} />
         )}
+
+        {route.view === 'quote-new' && (
+          // keyed so moving from one quote form to another starts a fresh form
+          <QuoteNewScreen
+            key={hash}
+            jobId={route.jobId || ''}
+            quoteId={route.quoteId}
+            jobs={jobs}
+            quotes={quotes}
+            settings={settings}
+          />
+        )}
+
+        {route.view === 'quote-detail' && (
+          <QuoteViewScreen quoteId={route.quoteId || ''} quotes={quotes} />
+        )}
+
+        {route.view === 'quotes' && <QuotesListScreen quotes={quotes} />}
 
         {route.view === 'receipts' && <ReceiptsListScreen receipts={receipts} />}
 

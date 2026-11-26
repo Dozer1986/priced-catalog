@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import type { JobDoc, EntryDoc, SettingsDoc, InvoiceDoc, InvoiceLineItem } from '../types';
+import type { JobDoc, EntryDoc, SettingsDoc, InvoiceDoc } from '../types';
 import { saveDoc } from '../db';
 import {
   billableHours,
@@ -7,9 +7,12 @@ import {
   nextInvoiceNumber,
   formatMoney,
   getLocalDateString,
-  hoursLabel,
-  parsePriceCents,
+  hasBadPrice,
+  PRICE_ERROR,
+  toLineItems,
+  type EditableItem,
 } from '../billing';
+import { ItemsEditor, TotalsPreview } from './InvoiceParts';
 
 interface InvoiceNewScreenProps {
   jobId: string;
@@ -17,14 +20,6 @@ interface InvoiceNewScreenProps {
   entries: EntryDoc[];
   invoices: InvoiceDoc[];
   settings: SettingsDoc;
-}
-
-interface EditableItem {
-  id: string;
-  kind: 'equipment' | 'materials';
-  description: string;
-  qty: number;
-  unitPriceStr: string;
 }
 
 export function InvoiceNewScreen({
@@ -82,12 +77,7 @@ export function InvoiceNewScreen({
   const totals = useMemo(() => {
     const laborHours = selectedEntries.map((e) => billableHours(e.minutes ?? 0));
     const rateCents = Math.round((job?.rate ?? settings.defaultRate) * 100);
-    const items: InvoiceLineItem[] = lineItems.map((item) => ({
-      kind: item.kind,
-      description: item.description.trim(),
-      qty: Number(item.qty) || 0,
-      unitPriceCents: parsePriceCents(item.unitPriceStr) ?? 0,
-    }));
+    const items = toLineItems(lineItems);
 
     return invoiceTotals(laborHours, rateCents, items, settings.taxRate);
   }, [selectedEntries, job?.rate, settings.defaultRate, settings.taxRate, lineItems]);
@@ -113,29 +103,6 @@ export function InvoiceNewScreen({
     setSelectedEntryIds(next);
   };
 
-  const addLineItem = (kind: 'equipment' | 'materials') => {
-    setLineItems((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        kind,
-        description: '',
-        qty: 1,
-        unitPriceStr: '',
-      },
-    ]);
-  };
-
-  const updateLineItem = (id: string, updates: Partial<EditableItem>) => {
-    setLineItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updates } : item))
-    );
-  };
-
-  const removeLineItem = (id: string) => {
-    setLineItems((prev) => prev.filter((item) => item.id !== id));
-  };
-
   const handleSaveInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!invoiceNumber.trim()) {
@@ -146,22 +113,15 @@ export function InvoiceNewScreen({
       setError('A one-sentence summary is required.');
       return;
     }
-    if (lineItems.some((item) => parsePriceCents(item.unitPriceStr) === null)) {
-      setError('Enter each price as a number, like 45 or 1,200.00.');
+    if (hasBadPrice(lineItems)) {
+      setError(PRICE_ERROR);
       return;
     }
 
     if (saving.current) return;
     saving.current = true;
     const newInvoiceId = `invoice:${crypto.randomUUID()}` as const;
-    const formattedItems: InvoiceLineItem[] = lineItems
-      .filter((item) => item.description.trim() || (parsePriceCents(item.unitPriceStr) ?? 0) > 0)
-      .map((item) => ({
-        kind: item.kind,
-        description: item.description.trim(),
-        qty: Number(item.qty) || 0,
-        unitPriceCents: parsePriceCents(item.unitPriceStr) ?? 0,
-      }));
+    const formattedItems = toLineItems(lineItems);
 
     const invoiceDoc: InvoiceDoc = {
       _id: newInvoiceId,
@@ -345,102 +305,7 @@ export function InvoiceNewScreen({
           )}
         </div>
 
-        {/* Equipment & Materials Items */}
-        <div className="rounded border border-rule bg-field p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-ink">
-              Equipment & Materials
-            </h3>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => addLineItem('equipment')}
-                className="rounded border border-rule bg-paper px-2.5 py-1 text-xs font-medium text-ink hover:border-ink-2"
-              >
-                + Add Equipment
-              </button>
-              <button
-                type="button"
-                onClick={() => addLineItem('materials')}
-                className="rounded border border-rule bg-paper px-2.5 py-1 text-xs font-medium text-ink hover:border-ink-2"
-              >
-                + Add Materials
-              </button>
-            </div>
-          </div>
-
-          {lineItems.length === 0 ? (
-            <p className="text-xs text-ink-2 italic">
-              No equipment or materials added yet.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {lineItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-2 rounded border border-rule bg-paper p-3 sm:flex-row sm:items-center"
-                >
-                  <select
-                    value={item.kind}
-                    onChange={(e) =>
-                      updateLineItem(item.id, {
-                        kind: e.target.value as 'equipment' | 'materials',
-                      })
-                    }
-                    className="rounded border border-rule bg-field px-2 py-1 text-xs text-ink"
-                  >
-                    <option value="equipment">Equipment</option>
-                    <option value="materials">Materials</option>
-                  </select>
-
-                  <input
-                    type="text"
-                    placeholder="Description"
-                    value={item.description}
-                    onChange={(e) =>
-                      updateLineItem(item.id, { description: e.target.value })
-                    }
-                    className="flex-1 rounded border border-rule bg-field px-2.5 py-1 text-xs text-ink"
-                  />
-
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-ink-2">Qty</label>
-                    <input
-                      type="number"
-                      min={1}
-                      step={1}
-                      value={item.qty}
-                      onChange={(e) =>
-                        updateLineItem(item.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })
-                      }
-                      className="fig w-16 rounded border border-rule bg-field px-2 py-1 text-xs text-ink"
-                    />
-
-                    <label className="text-xs text-ink-2">Price ($)</label>
-                    <input
-                      type="text"
-                      placeholder="0.00"
-                      value={item.unitPriceStr}
-                      onChange={(e) =>
-                        updateLineItem(item.id, { unitPriceStr: e.target.value })
-                      }
-                      className="fig w-24 rounded border border-rule bg-field px-2 py-1 text-xs text-ink"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => removeLineItem(item.id)}
-                      className="text-red-400 hover:text-red-300 px-2 py-1 text-xs"
-                      title="Remove row"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <ItemsEditor items={lineItems} setItems={setLineItems} />
 
         {/* Optional Notes */}
         <div className="rounded border border-rule bg-field p-4">
@@ -457,38 +322,7 @@ export function InvoiceNewScreen({
           />
         </div>
 
-        {/* Live Totals Preview */}
-        <div className="rounded border-2 border-rule bg-field p-5 space-y-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-ink-2 mb-2">
-            Totals Preview
-          </h3>
-          <div className="flex justify-between text-sm text-ink-2">
-            <span>Equipment</span>
-            <span className="fig">{formatMoney(totals.equipmentCents)}</span>
-          </div>
-          <div className="flex justify-between text-sm text-ink-2">
-            <span>Materials</span>
-            <span className="fig">{formatMoney(totals.materialsCents)}</span>
-          </div>
-          <div className="flex justify-between text-sm text-ink-2">
-            <span>Labor, {hoursLabel(totals.laborHours)}</span>
-            <span className="fig">{formatMoney(totals.laborCents)}</span>
-          </div>
-          <div className="flex justify-between text-sm border-t border-rule pt-2 font-medium text-ink">
-            <span>Subtotal</span>
-            <span className="fig">{formatMoney(totals.subtotalCents)}</span>
-          </div>
-          <div className="flex justify-between text-sm text-ink-2">
-            <span>
-              {settings.taxLabel}, {Math.round(settings.taxRate * 10000) / 100}% on equipment and materials (labor not taxed)
-            </span>
-            <span className="fig">{formatMoney(totals.taxCents)}</span>
-          </div>
-          <div className="flex justify-between text-lg font-bold text-ink border-t border-rule pt-2">
-            <span>Amount due</span>
-            <span className="fig text-mark">{formatMoney(totals.dueCents)}</span>
-          </div>
-        </div>
+        <TotalsPreview totals={totals} taxLabel={settings.taxLabel} taxRate={settings.taxRate} dueLabel="Amount due" />
 
         {/* Action Buttons */}
         <div className="flex justify-end gap-3 pt-2">

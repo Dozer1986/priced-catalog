@@ -71,6 +71,20 @@ export function subscribeSyncStatus(listener: (status: string) => void): () => v
   };
 }
 
+const COMPACTED_KEY = 'kamotec-compacted-at';
+
+/**
+ * Once a day, frees the space old revisions hold (the importer removes a receipt's photo once it is filed).
+ * Only with no conflict pending: compaction drops the base versions mergeEdits needs to merge one.
+ */
+async function compactWhenClean(): Promise<void> {
+  if (Date.now() - Number(localStorage.getItem(COMPACTED_KEY) ?? 0) < 86_400_000) return;
+  const { rows } = await db.allDocs({ conflicts: true, include_docs: true });
+  if (rows.some((r) => r.doc?._conflicts?.length)) return;
+  localStorage.setItem(COMPACTED_KEY, String(Date.now()));
+  await db.compact();
+}
+
 export function restartSync(): void {
   if (activeSync) {
     activeSync.cancel();
@@ -116,6 +130,7 @@ export function restartSync(): void {
           minute: '2-digit',
         });
         setSyncStatus(`Synced ${timeStr}`);
+        compactWhenClean().catch((err) => console.warn('compaction failed', err));
       }
     });
 

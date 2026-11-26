@@ -1,6 +1,7 @@
 import { db, saveDoc, removeDoc, subscribeSyncStatus, mergeConflictRows } from '../tracker/db';
 import type { JobDoc, MeasureDoc } from '../tracker/types';
 import { start, update } from './ui.js';
+import { alertUnhandled } from '../tracker/unhandled';
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   // Same worker as the tracker; this page needs its own scope to open with no signal.
@@ -9,9 +10,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     .catch((err) => console.error('ServiceWorker registration failed: ', err));
 }
 
-window.addEventListener('unhandledrejection', (e) => {
-  alert(`Something went wrong, so your last change may not be saved: ${e.reason?.message ?? e.reason}`);
-});
+window.addEventListener('unhandledrejection', alertUnhandled);
 
 async function reload() {
   const [measures, jobs] = await Promise.all(

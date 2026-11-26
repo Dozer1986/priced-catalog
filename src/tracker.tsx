@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import { TrackerApp } from './tracker/TrackerApp';
+import { alertUnhandled } from './tracker/unhandled';
 
 // Register service worker only in production
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
@@ -19,10 +20,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   });
 }
 
-// Saves run from click handlers nobody awaits; say so when one fails instead of losing it quietly.
-window.addEventListener('unhandledrejection', (e) => {
-  alert(`Something went wrong, so your last change may not be saved: ${e.reason?.message ?? e.reason}`);
-});
+window.addEventListener('unhandledrejection', alertUnhandled);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

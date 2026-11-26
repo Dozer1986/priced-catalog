@@ -5,7 +5,8 @@ Reads a receipt photo or PDF with Claude (`claude-opus-5-5`, structured output) 
 only user `kamotec` gets past the login check, which runs before any Claude call. `GET /health` reports
 `{"ok": true, "key": <API key loaded>}`. CORS allows only `https://dozer1986.github.io`.
 
-The API key is read at startup from `/root/.config/kamo-services/anthropic-api-key` (`KEY_FILE`).
+The API key is read at startup from `/root/.config/kamo-services/anthropic-api-key` (`KEY_FILE`). The container runs as
+`node` (uid 1000), so that file is owned by 1000 with mode 0600; `/root` (0700) keeps it from host users.
 
     npm ci && npm test              # mocked Claude
     LIVE=1 npm test                 # one real call on the Menards fixture (costs money)

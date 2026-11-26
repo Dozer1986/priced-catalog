@@ -3,7 +3,8 @@
 Every 5 minutes: publishes the ledger's Projects, Categories and "Paid with" values to the CouchDB doc
 `lists`, then, when confirmed receipts wait, the ledger has no `.~lock` file and Syncthing shows the laptop
 (`hp-640-laptop`, connected) at 100% with nothing pending on CT100, appends one Expenses row per receipt line,
-files the photo under `Receipts/<year>/` and sets `importedAt`, `ledgerRows`, `photoName` on the receipt.
+files the photo under `Receipts/<year>/`, sets `importedAt`, `ledgerRows`, `photoName` on the receipt and removes
+its attached photo, so phones don't keep a copy (they compact once a day after a clean sync).
 
 It edits the ledger in place with LibreOffice (so receipt links stay relative), after copying it to
 `.KAMOTec Expenses.ods.bak-<time>` (newest 5 kept). It saves only if the file's mtime and lock are unchanged

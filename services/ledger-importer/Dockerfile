@@ -6,4 +6,7 @@ RUN apt-get update \
 ENV HOME=/tmp
 WORKDIR /app
 COPY importer.py ./
+# Root on purpose: Syncthing runs as PUID 0, so the ledger folder it syncs and its config.xml are root-owned,
+# and the CouchDB .env is root 0600. A non-root user here needs those host files re-owned first.
+# nosemgrep: dockerfile.security.missing-user-entrypoint.missing-user-entrypoint
 ENTRYPOINT ["python3", "/app/importer.py"]

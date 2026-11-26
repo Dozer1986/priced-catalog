@@ -1,6 +1,7 @@
 import type { InvoiceDoc, EntryDoc } from '../types';
 import { removeDoc, saveDoc } from '../db';
 import { formatMoney, hoursLabel } from '../billing';
+import { SheetItemSections, SheetTotals } from './InvoiceParts';
 import '../invoice.css';
 
 interface InvoiceViewScreenProps {
@@ -27,8 +28,6 @@ export function InvoiceViewScreen({
     );
   }
 
-  const equipmentItems = invoice.items.filter((item) => item.kind === 'equipment');
-  const materialsItems = invoice.items.filter((item) => item.kind === 'materials');
   // Omit 0-hour labor rows
   const laborRows = invoice.labor.filter((row) => row.hours > 0);
 
@@ -115,57 +114,7 @@ export function InvoiceViewScreen({
           </dl>
         </header>
 
-        {/* Section Equipment (omit if no equipment items) */}
-        {equipmentItems.length > 0 && (
-          <section className="group">
-            <div className="group-head">
-              <h2>Equipment</h2>
-            </div>
-            {equipmentItems.map((item, idx) => (
-              <div key={idx} className="line">
-                <div className="line-main">
-                  <span className="line-name">{item.description}</span>
-                  <span className="line-desc">
-                    {item.qty} × {formatMoney(item.unitPriceCents)}
-                  </span>
-                </div>
-                <span className="line-cost num">
-                  {formatMoney(Math.round(item.qty * item.unitPriceCents))}
-                </span>
-              </div>
-            ))}
-            <div className="subtotal">
-              <span>Equipment subtotal</span>
-              <span className="num">{formatMoney(invoice.totals.equipmentCents)}</span>
-            </div>
-          </section>
-        )}
-
-        {/* Section Materials (omit if no materials items) */}
-        {materialsItems.length > 0 && (
-          <section className="group">
-            <div className="group-head">
-              <h2>Materials</h2>
-            </div>
-            {materialsItems.map((item, idx) => (
-              <div key={idx} className="line">
-                <div className="line-main">
-                  <span className="line-name">{item.description}</span>
-                  <span className="line-desc">
-                    {item.qty} × {formatMoney(item.unitPriceCents)}
-                  </span>
-                </div>
-                <span className="line-cost num">
-                  {formatMoney(Math.round(item.qty * item.unitPriceCents))}
-                </span>
-              </div>
-            ))}
-            <div className="subtotal">
-              <span>Materials subtotal</span>
-              <span className="num">{formatMoney(invoice.totals.materialsCents)}</span>
-            </div>
-          </section>
-        )}
+        <SheetItemSections items={invoice.items} totals={invoice.totals} />
 
         {/* Section Labor (omit 0-hour rows) */}
         <section className="group">
@@ -215,35 +164,7 @@ export function InvoiceViewScreen({
           </div>
         </section>
 
-        {/* Totals Section */}
-        <section className="total">
-          <div className="row">
-            <span>Equipment</span>
-            <span className="num">{formatMoney(invoice.totals.equipmentCents)}</span>
-          </div>
-          <div className="row">
-            <span>Materials</span>
-            <span className="num">{formatMoney(invoice.totals.materialsCents)}</span>
-          </div>
-          <div className="row">
-            <span>Labor, {hoursLabel(invoice.totals.laborHours)}</span>
-            <span className="num">{formatMoney(invoice.totals.laborCents)}</span>
-          </div>
-          <div className="row">
-            <span>Subtotal</span>
-            <span className="num">{formatMoney(invoice.totals.subtotalCents)}</span>
-          </div>
-          <div className="row">
-            <span>
-              {invoice.taxLabel}, {Math.round(invoice.taxRate * 10000) / 100}% on equipment and materials (labor not taxed)
-            </span>
-            <span className="num">{formatMoney(invoice.totals.taxCents)}</span>
-          </div>
-          <div className="row grand">
-            <span>Amount due</span>
-            <b className="num">{formatMoney(invoice.totals.dueCents)}</b>
-          </div>
-        </section>
+        <SheetTotals totals={invoice.totals} taxLabel={invoice.taxLabel} taxRate={invoice.taxRate} dueLabel="Amount due" />
 
         {/* Notes (if any) */}
         {invoice.notes && (

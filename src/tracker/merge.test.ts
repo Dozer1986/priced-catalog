@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { mergeEdits, sameData } from './merge';
-import type { EntryDoc, ReceiptDoc } from './types';
+import type { EntryDoc, QuoteDoc, ReceiptDoc } from './types';
 import { newLine } from './receipt';
 
 const base: EntryDoc = {
@@ -106,5 +106,39 @@ describe('merge of two offline edits of one receipt', () => {
     const other = { ...base, lines: [{ ...base.lines[0]!, project: 'Jones' }], updatedAt: '2026-11-11T10:00:00Z' };
     const merged = mergeEdits(base, laptop, other) as ReceiptDoc;
     expect(merged.lines).toEqual(other.lines);
+  });
+});
+
+describe('merge of two offline edits of one quote', () => {
+  const base: QuoteDoc = {
+    _id: 'quote:1',
+    type: 'quote',
+    jobId: 'job:1',
+    number: 'Q-2026-001',
+    date: '2026-11-26',
+    validUntil: '2026-12-26',
+    summary: 'Swap the panel',
+    notes: '',
+    status: 'draft',
+    businessName: 'KAMOTec',
+    customer: 'Pat',
+    address: '',
+    jobName: 'Panel',
+    rateCents: 10000,
+    taxRate: 0.07,
+    taxLabel: 'Indiana sales tax',
+    labor: [{ task: 'Swap', hours: 4 }],
+    items: [],
+    totals: { equipmentCents: 0, materialsCents: 0, laborHours: 4, laborCents: 40000, subtotalCents: 40000, taxCents: 0, dueCents: 40000 },
+    createdAt: '2026-11-26T10:00:00Z',
+    updatedAt: '2026-11-26T10:00:00Z',
+  };
+
+  it('keeps the status set on one device and the scope edited on the other', () => {
+    const phone = { ...base, status: 'sent' as const, updatedAt: '2026-11-27T09:00:00Z' };
+    const laptop = { ...base, summary: 'Swap the panel and add two circuits', updatedAt: '2026-11-27T08:00:00Z' };
+    for (const [a, b] of [[phone, laptop], [laptop, phone]] as const) {
+      expect(mergeEdits(base, a, b)).toMatchObject({ status: 'sent', summary: laptop.summary, labor: base.labor });
+    }
   });
 });

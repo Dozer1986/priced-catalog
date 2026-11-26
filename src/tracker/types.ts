@@ -86,6 +86,31 @@ export interface InvoiceDoc {
   totals: InvoiceTotals;
 }
 
+export interface QuoteDoc {
+  _id: `quote:${string}`;
+  _rev?: string;
+  updatedAt?: string;
+  type: 'quote';
+  jobId: string;
+  number: string; // e.g. 'Q-2026-001'
+  date: string; // quote date 'YYYY-MM-DD'
+  validUntil: string; // 'YYYY-MM-DD'
+  summary: string; // scope of work
+  notes: string; // exclusions and conditions
+  status: 'draft' | 'sent' | 'accepted' | 'declined';
+  businessName: string;
+  customer: string;
+  address: string;
+  jobName: string;
+  rateCents: number;
+  taxRate: number;
+  taxLabel: string;
+  labor: { task: string; hours: number }[]; // estimated hours at rateCents
+  items: InvoiceLineItem[];
+  totals: InvoiceTotals;
+  createdAt: string;
+}
+
 export interface ReceiptLine {
   item: string; // as printed on the receipt
   description: string; // plain English
@@ -151,7 +176,7 @@ export interface MeasureDoc {
   createdAt: string;
 }
 
-export type TrackerDoc = SettingsDoc | JobDoc | EntryDoc | InvoiceDoc | ReceiptDoc | ListsDoc | MeasureDoc;
+export type TrackerDoc = SettingsDoc | JobDoc | EntryDoc | InvoiceDoc | QuoteDoc | ReceiptDoc | ListsDoc | MeasureDoc;
 
 export interface SyncCredentials {
   url: string;

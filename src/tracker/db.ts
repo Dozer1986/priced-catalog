@@ -6,6 +6,7 @@ import type {
   JobDoc,
   EntryDoc,
   InvoiceDoc,
+  QuoteDoc,
   ReceiptDoc,
   ListsDoc,
   SyncCredentials,
@@ -329,6 +330,7 @@ export function useTrackerData() {
   const jobs = all.filter((d): d is JobDoc => d.type === 'job');
   const entries = all.filter((d): d is EntryDoc => d.type === 'entry');
   const invoices = all.filter((d): d is InvoiceDoc => d.type === 'invoice');
+  const quotes = all.filter((d): d is QuoteDoc => d.type === 'quote');
   const receipts = all.filter((d): d is ReceiptDoc => d.type === 'receipt');
   const lists = all.find((d): d is ListsDoc => d._id === 'lists' && d.type === 'lists');
 
@@ -338,6 +340,7 @@ export function useTrackerData() {
     jobs,
     entries,
     invoices,
+    quotes,
     receipts,
     lists,
     syncStatus,

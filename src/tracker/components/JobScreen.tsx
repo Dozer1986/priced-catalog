@@ -347,6 +347,12 @@ export function JobScreen({
             {isEditingJob ? 'Cancel edit' : 'Edit job'}
           </button>
           <a
+            href={`#/quote/new?job=${existingJob._id}`}
+            className="flex min-h-[36px] items-center justify-center rounded border border-rule px-3.5 py-1 text-xs font-semibold text-ink hover:border-ink-2"
+          >
+            New quote
+          </a>
+          <a
             href={`#/invoice/new?job=${existingJob._id}`}
             className="flex min-h-[36px] items-center justify-center rounded bg-mark px-3.5 py-1 text-xs font-semibold text-on-mark hover:opacity-90"
           >

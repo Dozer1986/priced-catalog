@@ -50,6 +50,31 @@ export function parsePriceCents(text: string): number | null {
   return Math.round(parseFloat(clean.replace(/,/g, '')) * 100);
 }
 
+/** An equipment or materials row on the invoice / quote form, price as typed. */
+export interface EditableItem {
+  id: string;
+  kind: 'equipment' | 'materials';
+  description: string;
+  qty: number;
+  unitPriceStr: string;
+}
+
+export const PRICE_ERROR = 'Enter each price as a number, like 45 or 1,200.00.';
+
+export const hasBadPrice = (items: EditableItem[]) => items.some((item) => parsePriceCents(item.unitPriceStr) === null);
+
+/** The rows worth saving: blank rows are dropped. */
+export function toLineItems(items: EditableItem[]): InvoiceLineItem[] {
+  return items
+    .filter((item) => item.description.trim() || (parsePriceCents(item.unitPriceStr) ?? 0) > 0)
+    .map((item) => ({
+      kind: item.kind,
+      description: item.description.trim(),
+      qty: Number(item.qty) || 0,
+      unitPriceCents: parsePriceCents(item.unitPriceStr) ?? 0,
+    }));
+}
+
 /**
  * Calculates invoice financial totals in integer cents.
  * Labor is never taxed.
@@ -118,6 +143,19 @@ export function nextInvoiceNumber(existingNumbers: string[], date: string | Date
 
   const nextSeq = maxSeq + 1;
   return `INV-${year}-${String(nextSeq).padStart(3, '0')}`;
+}
+
+/** Q-<year>-<3-digit seq>, one past the highest quote number of the date's year. */
+export function nextQuoteNumber(existingNumbers: string[], date: string): string {
+  const prefix = `Q-${date.slice(0, 4)}-`;
+  const seqs = existingNumbers.filter((n) => n.startsWith(prefix)).map((n) => parseInt(n.slice(prefix.length), 10) || 0);
+  return `${prefix}${String(Math.max(0, ...seqs) + 1).padStart(3, '0')}`;
+}
+
+/** 'YYYY-MM-DD' plus `days` days, in local time. */
+export function addDays(date: string, days: number): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return getLocalDateString(new Date(y!, m! - 1, d! + days));
 }
 
 /**

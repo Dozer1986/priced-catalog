@@ -5,6 +5,8 @@ import {
   parsePriceCents,
   invoiceTotals,
   nextInvoiceNumber,
+  nextQuoteNumber,
+  addDays,
   formatMoney,
   PRIOR_ISSUED_INVOICE_NUMBERS,
 } from './billing';
@@ -73,6 +75,22 @@ describe('billing pure functions', () => {
       expect(nextInvoiceNumber([], '2026-11-10')).toBe('INV-2026-004');
       expect(nextInvoiceNumber(['INV-2026-002', 'INV-2026-007'], '2026-11-10')).toBe('INV-2026-008');
       expect(nextInvoiceNumber([], '2027-01-03')).toBe('INV-2027-001');
+    });
+  });
+
+  describe('nextQuoteNumber', () => {
+    it('counts up per year from the quotes already written', () => {
+      expect(nextQuoteNumber([], '2026-11-26')).toBe('Q-2026-001');
+      expect(nextQuoteNumber(['Q-2026-002', 'Q-2026-009', 'Q-2025-040', 'INV-2026-050'], '2026-11-26')).toBe('Q-2026-010');
+      expect(nextQuoteNumber(['Q-2026-009'], '2027-01-02')).toBe('Q-2027-001');
+    });
+  });
+
+  describe('addDays', () => {
+    it('crosses month and year ends', () => {
+      expect(addDays('2026-11-26', 30)).toBe('2026-12-26');
+      expect(addDays('2026-12-15', 30)).toBe('2027-01-14');
+      expect(addDays('2028-02-01', 28)).toBe('2028-02-29');
     });
   });
 

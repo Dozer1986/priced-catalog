@@ -179,6 +179,8 @@ def test_import_two_receipts_with_photo_name_clash_and_a_return(setup, capsys):
     assert r1["photoName"] == "2026-11-14 Menards Carmel 2.jpg" and r1["ledgerRows"] == [first, first + 1]
     assert r2["photoName"] == "2026-11-14 Menards Carmel 3.jpg" and r2["ledgerRows"] == [first + 2, first + 3]
     assert r1["importedAt"] and r2["importedAt"] and "importedAt" not in r3
+    # filed photos leave the app; the receipt left out keeps its photo
+    assert "_attachments" not in r1 and "_attachments" not in r2 and "_attachments" in r3
     assert (year / "2026-11-14 Menards Carmel.jpg").read_bytes() == b"older photo"
     assert (year / "2026-11-14 Menards Carmel 2.jpg").read_bytes() == PHOTO
     assert "receipt:3: left out of the ledger" in capsys.readouterr().out

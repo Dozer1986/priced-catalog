@@ -435,10 +435,21 @@ def run(args):
     for r, rows, name, data, year_dir in done:
         if name:
             os.makedirs(year_dir, exist_ok=True)
-            with open(os.path.join(year_dir, name), "xb") as f:  # x: never overwrite a photo
+            path = os.path.join(year_dir, name)
+            with open(path, "xb") as f:  # x: never overwrite a photo
                 f.write(data)
+                f.flush()
+                os.fsync(f.fileno())
+            if os.path.getsize(path) != len(data):
+                raise RuntimeError(f"{path} is short; keeping the photo in the app")
         now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-        couch.update(r["_id"], lambda doc: doc.update(importedAt=now, ledgerRows=rows, photoName=name))
+
+        def mark(doc, rows=rows, name=name, now=now):
+            doc.update(importedAt=now, ledgerRows=rows, photoName=name)
+            if name:
+                doc.pop("_attachments", None)  # filed under Receipts/; every phone would otherwise keep a copy
+
+        couch.update(r["_id"], mark)
         log(f"{r['_id']}: imported to rows {rows[0]}-{rows[-1]}" + (f", photo {name}" if name else ""))
     return 0
 

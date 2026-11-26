@@ -10,11 +10,8 @@ on:
     branches: [master]
   workflow_dispatch:
 
-# Let GITHUB_TOKEN deploy to Pages.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # One deployment at a time; never cancel one that is already publishing.
 concurrency:
@@ -50,6 +47,10 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # Only this job can publish: the build job runs npm install scripts.
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

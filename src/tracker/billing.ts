@@ -1,4 +1,4 @@
-import type { InvoiceLineItem, InvoiceTotals } from './types';
+import type { InvoiceLineItem, InvoiceTotals, QuoteDoc } from './types';
 
 export const PRIOR_ISSUED_INVOICE_NUMBERS: readonly string[] = ['INV-2026-001', 'INV-2026-002', 'INV-2026-003']; // issued outside the app (Jan, Smith, David)
 
@@ -113,6 +113,11 @@ export function invoiceTotals(
     taxCents,
     dueCents,
   };
+}
+
+/** A quote's totals, worked out from its labor and items. */
+export function quoteTotals(quote: Pick<QuoteDoc, 'labor' | 'rateCents' | 'items' | 'taxRate'>): InvoiceTotals {
+  return invoiceTotals(quote.labor.map((row) => row.hours), quote.rateCents, quote.items, quote.taxRate);
 }
 
 /**

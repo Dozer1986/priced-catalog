@@ -1,6 +1,6 @@
 import type { QuoteDoc } from '../types';
 import { removeDoc, saveDoc } from '../db';
-import { formatMoney, hoursLabel } from '../billing';
+import { formatMoney, hoursLabel, quoteTotals } from '../billing';
 import { SheetItemSections, SheetTotals } from './InvoiceParts';
 import '../invoice.css';
 
@@ -24,6 +24,7 @@ export function QuoteViewScreen({ quoteId, quotes }: { quoteId: string; quotes: 
     );
   }
 
+  const totals = quoteTotals(quote);
   const laborRows = quote.labor.filter((row) => row.hours > 0);
   const setStatus = (status: QuoteDoc['status']) => saveDoc<QuoteDoc>(quote._id, (q) => q && { ...q, status });
 
@@ -112,7 +113,7 @@ export function QuoteViewScreen({ quoteId, quotes }: { quoteId: string; quotes: 
           </dl>
         </header>
 
-        <SheetItemSections items={quote.items} totals={quote.totals} />
+        <SheetItemSections items={quote.items} totals={totals} />
 
         {laborRows.length > 0 && (
           <section className="group">
@@ -121,7 +122,7 @@ export function QuoteViewScreen({ quoteId, quotes }: { quoteId: string; quotes: 
             </div>
             <div className="hours">
               <table>
-                <caption>Estimated labor, {hoursLabel(quote.totals.laborHours)}</caption>
+                <caption>Estimated labor, {hoursLabel(totals.laborHours)}</caption>
                 <thead>
                   <tr>
                     <th>Task</th>
@@ -139,21 +140,21 @@ export function QuoteViewScreen({ quoteId, quotes }: { quoteId: string; quotes: 
                 <tfoot>
                   <tr>
                     <td>
-                      {hoursLabel(quote.totals.laborHours)} @ {formatMoney(quote.rateCents)}
+                      {hoursLabel(totals.laborHours)} @ {formatMoney(quote.rateCents)}
                     </td>
-                    <td className="hrs num">{formatMoney(quote.totals.laborCents)}</td>
+                    <td className="hrs num">{formatMoney(totals.laborCents)}</td>
                   </tr>
                 </tfoot>
               </table>
             </div>
             <div className="subtotal">
               <span>Labor subtotal</span>
-              <span className="num">{formatMoney(quote.totals.laborCents)}</span>
+              <span className="num">{formatMoney(totals.laborCents)}</span>
             </div>
           </section>
         )}
 
-        <SheetTotals totals={quote.totals} taxLabel={quote.taxLabel} taxRate={quote.taxRate} dueLabel="Estimated total" />
+        <SheetTotals totals={totals} taxLabel={quote.taxLabel} taxRate={quote.taxRate} dueLabel="Estimated total" />
 
         {quote.notes && (
           <section>

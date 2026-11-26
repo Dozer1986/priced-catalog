@@ -1,5 +1,5 @@
 import type { QuoteDoc } from '../types';
-import { formatMoney } from '../billing';
+import { formatMoney, quoteTotals } from '../billing';
 
 export function QuotesListScreen({ quotes }: { quotes: QuoteDoc[] }) {
   const sorted = [...quotes].sort((a, b) => b.date.localeCompare(a.date) || b.number.localeCompare(a.number));
@@ -45,7 +45,7 @@ export function QuotesListScreen({ quotes }: { quotes: QuoteDoc[] }) {
                   <td className="fig px-4 py-3 whitespace-nowrap text-xs text-ink-2">{q.date}</td>
                   <td className="px-4 py-3 text-xs capitalize text-ink-2">{q.status}</td>
                   <td className="fig px-4 py-3 whitespace-nowrap text-right font-bold text-ink">
-                    {formatMoney(q.totals.dueCents)}
+                    {formatMoney(quoteTotals(q).dueCents)}
                   </td>
                 </tr>
               ))}

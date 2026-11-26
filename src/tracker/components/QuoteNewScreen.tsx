@@ -5,10 +5,10 @@ import {
   addDays,
   getLocalDateString,
   hasBadPrice,
-  invoiceTotals,
   nextQuoteNumber,
   parseHours,
   PRICE_ERROR,
+  quoteTotals,
   toLineItems,
   type EditableItem,
 } from '../billing';
@@ -105,7 +105,7 @@ export function QuoteNewScreen({ jobId, quoteId, jobs, quotes, settings }: Quote
   const taxRate = quote?.taxRate ?? settings.taxRate;
   const taxLabel = quote?.taxLabel ?? settings.taxLabel;
   const current = fields(form, labor, items);
-  const totals = invoiceTotals(current.labor.map((row) => row.hours), rateCents, current.items, taxRate);
+  const totals = quoteTotals({ ...current, rateCents, taxRate });
   const backHref = quote ? `#/quote/${quote._id}` : `#/job/${job._id}`;
 
   const handleSave = async (e: React.FormEvent) => {
@@ -127,11 +127,7 @@ export function QuoteNewScreen({ jobId, quoteId, jobs, quotes, settings }: Quote
         Object.entries(current).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(before[key as keyof typeof before])),
       );
       if (Object.keys(changed).length) {
-        await saveDoc<QuoteDoc>(id, (q) => {
-          if (!q) return undefined;
-          const next = { ...q, ...changed };
-          return { ...next, totals: invoiceTotals(next.labor.map((row) => row.hours), next.rateCents, next.items, next.taxRate) };
-        });
+        await saveDoc<QuoteDoc>(id, (q) => q && { ...q, ...changed });
       }
     } else {
       id = `quote:${crypto.randomUUID()}`;
@@ -148,7 +144,6 @@ export function QuoteNewScreen({ jobId, quoteId, jobs, quotes, settings }: Quote
         rateCents,
         taxRate,
         taxLabel,
-        totals,
         createdAt: new Date().toISOString(),
       };
       await saveDoc(id, () => doc);

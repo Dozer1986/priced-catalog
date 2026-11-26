@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { mergeEdits, sameData } from './merge';
 import type { EntryDoc, QuoteDoc, ReceiptDoc } from './types';
 import { newLine } from './receipt';
+import { quoteTotals } from './billing';
 
 const base: EntryDoc = {
   _id: 'entry:1',
@@ -129,7 +130,6 @@ describe('merge of two offline edits of one quote', () => {
     taxLabel: 'Indiana sales tax',
     labor: [{ task: 'Swap', hours: 4 }],
     items: [],
-    totals: { equipmentCents: 0, materialsCents: 0, laborHours: 4, laborCents: 40000, subtotalCents: 40000, taxCents: 0, dueCents: 40000 },
     createdAt: '2026-11-26T10:00:00Z',
     updatedAt: '2026-11-26T10:00:00Z',
   };
@@ -139,6 +139,19 @@ describe('merge of two offline edits of one quote', () => {
     const laptop = { ...base, summary: 'Swap the panel and add two circuits', updatedAt: '2026-11-27T08:00:00Z' };
     for (const [a, b] of [[phone, laptop], [laptop, phone]] as const) {
       expect(mergeEdits(base, a, b)).toMatchObject({ status: 'sent', summary: laptop.summary, labor: base.labor });
+    }
+  });
+
+  it('totals the merged quote from labor changed on one device and materials added on the other', () => {
+    const phone = { ...base, labor: [{ task: 'Swap', hours: 6 }], updatedAt: '2026-11-27T09:00:00Z' };
+    const laptop = {
+      ...base,
+      items: [{ kind: 'materials' as const, description: 'Breakers', qty: 1, unitPriceCents: 10000 }],
+      updatedAt: '2026-11-27T08:00:00Z',
+    };
+    for (const [a, b] of [[phone, laptop], [laptop, phone]] as const) {
+      // 6 h at $100 = $600 labor (untaxed), $100 materials + 7% tax = $107: $707 in all
+      expect(quoteTotals(mergeEdits(base, a, b) as QuoteDoc)).toMatchObject({ laborCents: 60000, materialsCents: 10000, taxCents: 700, dueCents: 70700 });
     }
   });
 });

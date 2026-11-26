@@ -107,7 +107,6 @@ export interface QuoteDoc {
   taxLabel: string;
   labor: { task: string; hours: number }[]; // estimated hours at rateCents
   items: InvoiceLineItem[];
-  totals: InvoiceTotals;
   createdAt: string;
 }
 

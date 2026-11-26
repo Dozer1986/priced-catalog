@@ -30,5 +30,8 @@ jobs:
         run: npm run typecheck
       - name: Run tests
         run: npm test
+      - name: Receipt reader tests
+        working-directory: services/receipt-reader
+        run: npm ci && npm test
       - name: Build
         run: npm run build

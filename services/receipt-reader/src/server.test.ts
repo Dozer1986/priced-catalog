@@ -138,6 +138,24 @@ describe('receipt reader', () => {
     expect(receipt.notes).toMatch(/11\/10\/26.*tax rate/);
     reader.close();
   });
+
+  it('caps Claude calls at 30 an hour', async () => {
+    const parse = vi.fn().mockResolvedValue({ model: 'm', stop_reason: 'end_turn', usage: {}, parsed_output: fixture });
+    const reader = await startReader(parse);
+    for (let i = 0; i < 30; i++) expect((await fetch(`${reader.url}/extract`, jpeg)).status).toBe(200);
+    expect((await fetch(`${reader.url}/extract`, jpeg)).status).toBe(429);
+    expect(parse).toHaveBeenCalledTimes(30);
+    reader.close();
+  });
+
+  it("passes on the API's reason for an error", async () => {
+    const err = Anthropic.APIError.generate(400, { type: 'error', error: { type: 'invalid_request_error', message: 'Your credit balance is too low' } }, undefined, new Headers());
+    const reader = await startReader(vi.fn().mockRejectedValue(err));
+    const res = await fetch(`${reader.url}/extract`, jpeg);
+    expect(res.status).toBe(502);
+    expect((await res.json()).error).toMatch(/credit balance is too low/);
+    reader.close();
+  });
 });
 
 describe.runIf(process.env.LIVE === '1')('live Claude call (costs money)', () => {

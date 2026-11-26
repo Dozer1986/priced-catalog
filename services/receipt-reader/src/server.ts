@@ -6,6 +6,7 @@ import { ReceiptSchema, PROMPT, checkReceipt } from './receipt.js';
 const ALLOWED_ORIGIN = 'https://dozer1986.github.io';
 const ALLOWED_USER = 'kamotec';
 const MAX_BYTES = 10 * 1024 * 1024; // the app sends at most a 2000px JPEG or a 5 MB PDF
+const MAX_PER_HOUR = 30; // a leaked login can't run up the Anthropic bill; a big shopping day is ~10 receipts
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
 
 export interface ServerOptions {
@@ -69,6 +70,7 @@ async function extract(client: Anthropic, upload: { type: string; data: Buffer }
 }
 
 export function createServer({ client, couchUrl }: ServerOptions): http.Server {
+  const recent: number[] = []; // start times of Claude calls in the last hour
   return http.createServer(async (req, res) => {
     const started = Date.now();
     const send = (status: number, body: unknown) => {
@@ -93,12 +95,18 @@ export function createServer({ client, couchUrl }: ServerOptions): http.Server {
       if (!client) return send(503, { error: 'The receipt reader has no Anthropic API key.' });
       // Before reading the file or calling Claude: each call costs money
       if (!(await isTrackerLogin(couchUrl, req.headers.authorization))) return send(401, { error: 'Login rejected.' });
+      const now = Date.now();
+      while (recent.length && recent[0]! < now - 3_600_000) recent.shift();
+      if (recent.length >= MAX_PER_HOUR) return send(429, { error: `Over ${MAX_PER_HOUR} receipts this hour. Try again later or enter it by hand.` });
+      recent.push(now);
       send(200, { receipt: await extract(client, await readUpload(req)) });
     } catch (err) {
       if (err instanceof HttpError) return send(err.status, { error: err.message });
       if (err instanceof Anthropic.APIError) {
-        console.error(`claude: API error ${err.status}`);
-        return send(502, { error: `Claude is unavailable (${err.status ?? 'no connection'}). Try again in a minute.` });
+        // The API's own reason (e.g. "credit balance is too low") tells the user what to fix
+        const reason = (err.error as { error?: { message?: string } } | undefined)?.error?.message;
+        console.error(`claude: API error ${err.status} ${reason ?? ''}`);
+        return send(502, { error: `Claude is unavailable (${err.status ?? 'no connection'}): ${reason ?? 'try again in a minute.'}` });
       }
       console.error('extract failed:', err instanceof Error ? err.message : err);
       send(500, { error: 'The receipt reader failed.' });

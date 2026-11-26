@@ -8,6 +8,6 @@ Type=oneshot
 # Paths inside the container match the host paths, so the importer's defaults apply.
 ExecStart=/usr/bin/docker run --rm --name kamo-ledger-importer --network host \
   -v /opt/docker/syncthing/data/Documents/KAMOTec:/opt/docker/syncthing/data/Documents/KAMOTec \
-  -v /opt/beihl-ai/obsidian-livesync/.env:/opt/beihl-ai/obsidian-livesync/.env:ro \
+  -v /root/.config/kamo-services/importer-couch.env:/run/couch.env:ro -e COUCH_ENV_FILE=/run/couch.env \
   -v /opt/docker/syncthing/config/config.xml:/opt/docker/syncthing/config/config.xml:ro \
   kamo-ledger-importer

@@ -1,5 +1,5 @@
 import type { InvoiceDoc } from '../types';
-import { formatMoney } from '../billing';
+import { formatMoney, unpaidCents } from '../billing';
 
 interface InvoicesListScreenProps {
   invoices: InvoiceDoc[];
@@ -9,6 +9,7 @@ export function InvoicesListScreen({ invoices }: InvoicesListScreenProps) {
   const sortedInvoices = [...invoices].sort((a, b) => {
     return b.date.localeCompare(a.date) || b.number.localeCompare(a.number);
   });
+  const unpaidCount = invoices.filter((inv) => !inv.paidDate).length;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6">
@@ -21,6 +22,13 @@ export function InvoicesListScreen({ invoices }: InvoicesListScreenProps) {
           View jobs
         </a>
       </div>
+
+      {unpaidCount > 0 && (
+        <p className="mb-4 text-sm text-ink-2">
+          Unpaid: <span className="fig font-bold text-ink">{formatMoney(unpaidCents(invoices))}</span> on {unpaidCount}{' '}
+          {unpaidCount === 1 ? 'invoice' : 'invoices'}
+        </p>
+      )}
 
       {sortedInvoices.length === 0 ? (
         <div className="rounded border border-dashed border-rule p-8 text-center text-ink-2">
@@ -38,6 +46,7 @@ export function InvoicesListScreen({ invoices }: InvoicesListScreenProps) {
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3 text-right">Amount Due</th>
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Action</th>
               </tr>
             </thead>
@@ -60,6 +69,9 @@ export function InvoicesListScreen({ invoices }: InvoicesListScreenProps) {
                   </td>
                   <td className="fig px-4 py-3 whitespace-nowrap text-right font-bold text-ink">
                     {formatMoney(inv.totals.dueCents)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs">
+                    {inv.paidDate ? <span className="text-ink-2">Paid</span> : <span className="font-semibold text-mark">Unpaid</span>}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-right text-xs">
                     <a

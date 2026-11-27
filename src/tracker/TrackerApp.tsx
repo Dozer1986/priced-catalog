@@ -103,7 +103,7 @@ export function TrackerApp() {
       <main className="flex-1">
         {loaded && (<>
         {route.view === 'home' && (
-          <HomeScreen jobs={jobs} entries={entries} />
+          <HomeScreen jobs={jobs} entries={entries} invoices={invoices} />
         )}
 
         {route.view === 'job-new' && (

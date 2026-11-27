@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import type { JobDoc, EntryDoc } from '../types';
+import type { JobDoc, EntryDoc, InvoiceDoc } from '../types';
 import { startJobTimer, stopEntryTimer, saveDoc } from '../db';
+import { formatMoney, unpaidCents } from '../billing';
 
 interface HomeScreenProps {
   jobs: JobDoc[];
   entries: EntryDoc[];
+  invoices: InvoiceDoc[];
 }
 
 function formatElapsed(totalSeconds: number): string {
@@ -15,7 +17,7 @@ function formatElapsed(totalSeconds: number): string {
   return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-export function HomeScreen({ jobs, entries }: HomeScreenProps) {
+export function HomeScreen({ jobs, entries, invoices }: HomeScreenProps) {
   const [now, setNow] = useState(() => new Date());
   // What is typed on each timer card; saved on blur or Stop, not per keystroke.
   const [taskDrafts, setTaskDrafts] = useState<Record<string, string>>({});
@@ -34,6 +36,8 @@ export function HomeScreen({ jobs, entries }: HomeScreenProps) {
   const openJobs = jobs.filter((j) => j.status !== 'closed');
   const closedJobs = jobs.filter((j) => j.status === 'closed');
   const jobMap = new Map(jobs.map((j) => [j._id, j]));
+
+  const unpaid = invoices.filter((inv) => !inv.paidDate);
 
   const saveTask = (id: string) => {
     const task = taskDrafts[id];
@@ -101,6 +105,13 @@ export function HomeScreen({ jobs, entries }: HomeScreenProps) {
             );
           })}
         </section>
+      )}
+
+      {unpaid.length > 0 && (
+        <a href="#/invoices" className="mb-6 block text-sm text-ink-2 hover:text-ink">
+          Unpaid: <span className="fig font-bold text-ink">{formatMoney(unpaidCents(unpaid))}</span> on {unpaid.length}{' '}
+          {unpaid.length === 1 ? 'invoice' : 'invoices'} →
+        </a>
       )}
 
       {/* Open jobs section */}

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { InvoiceTotals } from './types';
 import {
   billableHours,
   parseHours,
@@ -8,6 +9,7 @@ import {
   nextQuoteNumber,
   addDays,
   formatMoney,
+  unpaidCents,
   PRIOR_ISSUED_INVOICE_NUMBERS,
 } from './billing';
 
@@ -115,6 +117,15 @@ describe('billing pure functions', () => {
       expect(formatMoney(123456)).toBe('$1,234.56');
       expect(formatMoney(26316)).toBe('$263.16');
       expect(formatMoney(0)).toBe('$0.00');
+    });
+  });
+
+  describe('unpaidCents', () => {
+    it('sums the amount due on unpaid invoices only, in cents', () => {
+      const inv = (dueCents: number, paidDate?: string) => ({ paidDate, totals: { dueCents } as InvoiceTotals });
+      expect(unpaidCents([])).toBe(0);
+      expect(unpaidCents([inv(26316), inv(10001), inv(50000, '2026-11-27')])).toBe(36317);
+      expect(unpaidCents([inv(50000, '2026-11-27')])).toBe(0);
     });
   });
 });

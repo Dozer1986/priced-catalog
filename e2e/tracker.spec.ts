@@ -99,6 +99,27 @@ test('tracker: Aaron tracks hours and creates an invoice', async ({ page }) => {
   await expect(laborTable).toContainText('Install filter');
   await expect(laborTable).not.toContainText('In progress');
 
+  // Mark it paid, check the list and home screen, then mark it unpaid again
+  await expect(page.getByText('Unpaid', { exact: true })).toBeVisible();
+  await page.getByLabel('Paid by').fill('Check #1042');
+  await page.getByRole('button', { name: 'Mark paid' }).click();
+  await expect(page.getByText(/^Paid \d{4}-\d{2}-\d{2} · Check #1042$/)).toBeVisible();
+  await page.getByRole('link', { name: 'All invoices' }).click();
+  await expect(page.locator('tbody tr')).toContainText('Paid');
+  await expect(page.getByText(/^Unpaid:/)).toHaveCount(0);
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await expect(page.getByText(/^Unpaid:/)).toHaveCount(0);
+  await page.getByRole('link', { name: 'Invoices', exact: true }).click();
+  await page.getByRole('link', { name: 'View', exact: true }).click();
+  await page.getByRole('button', { name: 'Mark unpaid' }).click();
+  await expect(page.getByRole('button', { name: 'Mark paid' })).toBeVisible();
+  await page.getByRole('link', { name: 'All invoices' }).click();
+  await expect(page.getByText('Unpaid: $263.16 on 1 invoice')).toBeVisible();
+  await expect(page.locator('tbody tr')).toContainText('Unpaid');
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await page.getByRole('link', { name: 'Unpaid: $263.16 on 1 invoice' }).click();
+  await expect(page.getByRole('heading', { name: 'Invoices' })).toBeVisible();
+
   // Verify no console errors occurred
   expect(errors).toEqual([]);
 

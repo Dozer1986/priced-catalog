@@ -1,4 +1,4 @@
-import type { InvoiceLineItem, InvoiceTotals, QuoteDoc } from './types';
+import type { InvoiceDoc, InvoiceLineItem, InvoiceTotals, QuoteDoc } from './types';
 
 export const PRIOR_ISSUED_INVOICE_NUMBERS: readonly string[] = ['INV-2026-001', 'INV-2026-002', 'INV-2026-003']; // issued outside the app
 
@@ -155,6 +155,11 @@ export function nextQuoteNumber(existingNumbers: string[], date: string): string
   const prefix = `Q-${date.slice(0, 4)}-`;
   const seqs = existingNumbers.filter((n) => n.startsWith(prefix)).map((n) => parseInt(n.slice(prefix.length), 10) || 0);
   return `${prefix}${String(Math.max(0, ...seqs) + 1).padStart(3, '0')}`;
+}
+
+/** Cents still owed: the amount due on every invoice with no paidDate. */
+export function unpaidCents(invoices: Pick<InvoiceDoc, 'paidDate' | 'totals'>[]): number {
+  return invoices.filter((inv) => !inv.paidDate).reduce((sum, inv) => sum + inv.totals.dueCents, 0);
 }
 
 /** 'YYYY-MM-DD' plus `days` days, in local time. */

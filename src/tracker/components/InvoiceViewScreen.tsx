@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import type { InvoiceDoc, EntryDoc } from '../types';
 import { removeDoc, saveDoc } from '../db';
-import { formatMoney, hoursLabel } from '../billing';
+import { formatMoney, getLocalDateString, hoursLabel } from '../billing';
 import { SheetItemSections, SheetTotals } from './InvoiceParts';
 import '../invoice.css';
 
@@ -16,6 +17,8 @@ export function InvoiceViewScreen({
   entries,
 }: InvoiceViewScreenProps) {
   const invoice = invoices.find((inv) => inv._id === invoiceId);
+  const [paidDate, setPaidDate] = useState(getLocalDateString);
+  const [paidMethod, setPaidMethod] = useState('');
 
   if (!invoice) {
     return (
@@ -46,6 +49,10 @@ export function InvoiceViewScreen({
       window.location.hash = '#/invoices';
     }
   };
+
+  // Only the paid fields change; the totals stay as issued.
+  const setPaid = (paid: Pick<InvoiceDoc, 'paidDate' | 'paidMethod'>) =>
+    saveDoc<InvoiceDoc>(invoice._id, (inv) => inv && { ...inv, ...paid });
 
   return (
     <div className="invoice-container py-6">
@@ -83,6 +90,52 @@ export function InvoiceViewScreen({
             Print / Save as PDF
           </button>
         </div>
+      </div>
+
+      <div className="no-print mx-auto mb-6 flex max-w-[760px] flex-wrap items-center gap-3 px-4 text-sm">
+        {invoice.paidDate ? (
+          <>
+            <span className="font-semibold text-ink">
+              Paid {invoice.paidDate}{invoice.paidMethod && ` · ${invoice.paidMethod}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => setPaid({ paidDate: undefined, paidMethod: undefined })}
+              className="rounded border border-rule px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-ink-2"
+            >
+              Mark unpaid
+            </button>
+          </>
+        ) : (
+          <>
+            <span className="font-semibold text-mark">Unpaid</span>
+            <label className="sr-only" htmlFor="paid-date">Paid date</label>
+            <input
+              id="paid-date"
+              type="date"
+              value={paidDate}
+              onChange={(e) => setPaidDate(e.target.value)}
+              className="rounded border border-rule bg-paper px-2 py-1 text-xs text-ink"
+            />
+            <label className="sr-only" htmlFor="paid-method">Paid by</label>
+            <input
+              id="paid-method"
+              type="text"
+              placeholder="Check #1042, Cash, Zelle"
+              value={paidMethod}
+              onChange={(e) => setPaidMethod(e.target.value)}
+              className="rounded border border-rule bg-paper px-2 py-1 text-xs text-ink placeholder:text-ink-2/60"
+            />
+            <button
+              type="button"
+              disabled={!paidDate}
+              onClick={() => setPaid({ paidDate, paidMethod: paidMethod.trim() || undefined })}
+              className="rounded border border-rule px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-ink-2 disabled:opacity-50"
+            >
+              Mark paid
+            </button>
+          </>
+        )}
       </div>
 
       {/* Invoice Sheet */}

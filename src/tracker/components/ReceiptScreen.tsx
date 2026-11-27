@@ -290,7 +290,7 @@ export function ReceiptScreen({ receiptId, receipts, jobs, lists }: ReceiptScree
           <label htmlFor="r-job" className="block text-sm font-medium text-ink">Job</label>
           <select id="r-job" value={jobId} onChange={(e) => void handleJobChange(e.target.value)} className={inputClass}>
             <option value="">—</option>
-            {jobs.filter((job) => job.status === 'open').map((job) => (
+            {jobs.filter((job) => job.status === 'open' || job._id === jobId).map((job) => (
               <option key={job._id} value={job._id}>{job.customer} - {job.name}</option>
             ))}
           </select>

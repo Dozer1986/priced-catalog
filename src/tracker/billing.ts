@@ -97,6 +97,8 @@ export interface UnbilledReceiptLine {
 }
 
 /** Billable receipt lines assigned to a job that are not referenced by a saved invoice. */
+// shortcut: lines are keyed by position, so deleting a line on a not-yet-filed receipt after billing it can re-offer
+// another line; filed receipts can't be edited. Upgrade to a stable line id if that ever bites.
 export function unbilledReceiptLines(jobId: string, receipts: ReceiptDoc[], invoices: InvoiceDoc[]): UnbilledReceiptLine[] {
   const billed = new Set(invoices.flatMap((invoice) => invoice.items.map((item) => item.receiptLine).filter(Boolean)));
   return receipts

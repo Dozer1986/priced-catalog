@@ -76,11 +76,15 @@ export function ItemsEditor({ items, setItems }: { items: EditableItem[]; setIte
                 <label className="text-xs text-ink-2">Qty</label>
                 <input
                   type="number"
-                  min={1}
-                  step={1}
+                  min={item.receiptLine ? undefined : 1}
+                  step={item.receiptLine ? 'any' : 1}
                   value={item.qty}
                   onChange={(e) =>
-                    updateLineItem(item.id, { qty: Math.max(1, parseInt(e.target.value, 10) || 1) })
+                    updateLineItem(item.id, {
+                      qty: item.receiptLine
+                        ? Number(e.target.value) || 1
+                        : Math.max(1, parseInt(e.target.value, 10) || 1),
+                    })
                   }
                   className="fig w-16 rounded border border-rule bg-field px-2 py-1 text-xs text-ink"
                 />

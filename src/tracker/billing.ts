@@ -1,4 +1,4 @@
-import type { InvoiceDoc, InvoiceLineItem, InvoiceTotals, QuoteDoc } from './types';
+import type { InvoiceDoc, InvoiceLineItem, InvoiceTotals, QuoteDoc, ReceiptDoc, ReceiptLine } from './types';
 
 export const PRIOR_ISSUED_INVOICE_NUMBERS: readonly string[] = ['INV-2026-001', 'INV-2026-002', 'INV-2026-003']; // issued outside the app
 
@@ -57,6 +57,7 @@ export interface EditableItem {
   description: string;
   qty: number;
   unitPriceStr: string;
+  receiptLine?: string;
 }
 
 export const PRICE_ERROR = 'Enter each price as a number, like 45 or 1,200.00.';
@@ -72,6 +73,7 @@ export function toLineItems(items: EditableItem[]): InvoiceLineItem[] {
       description: item.description.trim(),
       qty: Number(item.qty) || 0,
       unitPriceCents: parsePriceCents(item.unitPriceStr) ?? 0,
+      ...(item.receiptLine && { receiptLine: item.receiptLine }),
     }));
 }
 
@@ -83,7 +85,26 @@ export function toEditableItems(items: InvoiceLineItem[]): EditableItem[] {
     description: item.description,
     qty: item.qty,
     unitPriceStr: (item.unitPriceCents / 100).toFixed(2),
+    ...(item.receiptLine && { receiptLine: item.receiptLine }),
   }));
+}
+
+export interface UnbilledReceiptLine {
+  receipt: ReceiptDoc;
+  line: ReceiptLine;
+  lineIndex: number;
+  receiptLine: string;
+}
+
+/** Billable receipt lines assigned to a job that are not referenced by a saved invoice. */
+export function unbilledReceiptLines(jobId: string, receipts: ReceiptDoc[], invoices: InvoiceDoc[]): UnbilledReceiptLine[] {
+  const billed = new Set(invoices.flatMap((invoice) => invoice.items.map((item) => item.receiptLine).filter(Boolean)));
+  return receipts
+    .filter((receipt) => receipt.jobId === jobId)
+    .flatMap((receipt) => receipt.lines.flatMap((line, lineIndex) => {
+      const receiptLine = `${receipt._id}#${lineIndex}`;
+      return line.billable && !billed.has(receiptLine) ? [{ receipt, line, lineIndex, receiptLine }] : [];
+    }));
 }
 
 /**

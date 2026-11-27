@@ -133,6 +133,7 @@ export function TrackerApp() {
             jobs={jobs}
             entries={entries}
             invoices={invoices}
+            receipts={receipts}
             settings={settings}
             quote={quotes.find((q) => q._id === route.quoteId)}
           />
@@ -172,7 +173,7 @@ export function TrackerApp() {
 
         {route.view === 'receipt' && (
           // keyed so moving between receipts starts a fresh form
-          <ReceiptScreen key={hash} receiptId={route.receiptId} receipts={receipts} lists={lists} />
+          <ReceiptScreen key={hash} receiptId={route.receiptId} receipts={receipts} jobs={jobs} lists={lists} />
         )}
 
         {route.view === 'settings' && (

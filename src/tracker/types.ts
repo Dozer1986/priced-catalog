@@ -84,6 +84,8 @@ export interface InvoiceDoc {
   labor: InvoiceLaborItem[];
   items: InvoiceLineItem[];
   totals: InvoiceTotals;
+  paidDate?: string; // 'YYYY-MM-DD'; no paidDate = unpaid
+  paidMethod?: string; // e.g. "Check #1042", "Cash", "Zelle"
 }
 
 export interface QuoteDoc {

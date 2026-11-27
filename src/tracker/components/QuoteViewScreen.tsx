@@ -68,6 +68,14 @@ export function QuoteViewScreen({ quoteId, quotes }: { quoteId: string; quotes: 
               Edit quote
             </a>
           )}
+          {quote.status === 'accepted' && (
+            <a
+              href={`#/invoice/new?job=${quote.jobId}&quote=${quote._id}`}
+              className="rounded border border-rule px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-ink-2"
+            >
+              Create invoice
+            </a>
+          )}
           <button
             type="button"
             onClick={handleDelete}

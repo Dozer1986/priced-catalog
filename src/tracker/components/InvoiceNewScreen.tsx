@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import type { JobDoc, EntryDoc, SettingsDoc, InvoiceDoc } from '../types';
+import type { JobDoc, EntryDoc, SettingsDoc, InvoiceDoc, QuoteDoc } from '../types';
 import { saveDoc } from '../db';
 import {
   billableHours,
@@ -9,6 +9,8 @@ import {
   getLocalDateString,
   hasBadPrice,
   PRICE_ERROR,
+  toEditableItems,
+  PRIOR_ISSUED_INVOICE_NUMBERS,
   toLineItems,
   type EditableItem,
 } from '../billing';
@@ -20,6 +22,7 @@ interface InvoiceNewScreenProps {
   entries: EntryDoc[];
   invoices: InvoiceDoc[];
   settings: SettingsDoc;
+  quote?: QuoteDoc; // an accepted quote whose summary and lines prefill the form
 }
 
 export function InvoiceNewScreen({
@@ -28,6 +31,7 @@ export function InvoiceNewScreen({
   entries,
   invoices,
   settings,
+  quote,
 }: InvoiceNewScreenProps) {
   const job = jobs.find((j) => j._id === jobId);
   const today = getLocalDateString();
@@ -45,7 +49,7 @@ export function InvoiceNewScreen({
   );
 
   // Equipment & Materials lines
-  const [lineItems, setLineItems] = useState<EditableItem[]>([]);
+  const [lineItems, setLineItems] = useState<EditableItem[]>(() => toEditableItems(quote?.items ?? []));
 
   // Invoice Number
   const existingNumbers = invoices.map((i) => i.number);
@@ -63,7 +67,7 @@ export function InvoiceNewScreen({
   }, [finishedEntries, today]);
 
   const [completedDate, setCompletedDate] = useState(latestEntryDate);
-  const [summary, setSummary] = useState('');
+  const [summary, setSummary] = useState(quote?.summary.replace(/\s*\n\s*/g, ' ') ?? ''); // the summary box is one line
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
   const saving = useRef(false); // a second tap during the save must not make a second invoice
@@ -107,6 +111,10 @@ export function InvoiceNewScreen({
     e.preventDefault();
     if (!invoiceNumber.trim()) {
       setError('Invoice number is required.');
+      return;
+    }
+    if ([...PRIOR_ISSUED_INVOICE_NUMBERS, ...existingNumbers].includes(invoiceNumber.trim())) {
+      setError(`Invoice ${invoiceNumber.trim()} already exists. Use another number.`);
       return;
     }
     if (!summary.trim()) {

@@ -99,6 +99,27 @@ test('tracker: Aaron tracks hours and creates an invoice', async ({ page }) => {
   await expect(laborTable).toContainText('Install filter');
   await expect(laborTable).not.toContainText('In progress');
 
+  // Mark it paid, check the list and home screen, then mark it unpaid again
+  await expect(page.getByText('Unpaid', { exact: true })).toBeVisible();
+  await page.getByLabel('Paid by').fill('Check #1042');
+  await page.getByRole('button', { name: 'Mark paid' }).click();
+  await expect(page.getByText(/^Paid \d{4}-\d{2}-\d{2} · Check #1042$/)).toBeVisible();
+  await page.getByRole('link', { name: 'All invoices' }).click();
+  await expect(page.locator('tbody tr')).toContainText('Paid');
+  await expect(page.getByText(/^Unpaid:/)).toHaveCount(0);
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await expect(page.getByText(/^Unpaid:/)).toHaveCount(0);
+  await page.getByRole('link', { name: 'Invoices', exact: true }).click();
+  await page.getByRole('link', { name: 'View', exact: true }).click();
+  await page.getByRole('button', { name: 'Mark unpaid' }).click();
+  await expect(page.getByRole('button', { name: 'Mark paid' })).toBeVisible();
+  await page.getByRole('link', { name: 'All invoices' }).click();
+  await expect(page.getByText('Unpaid: $263.16 on 1 invoice')).toBeVisible();
+  await expect(page.locator('tbody tr')).toContainText('Unpaid');
+  await page.getByRole('link', { name: 'Jobs', exact: true }).click();
+  await page.getByRole('link', { name: 'Unpaid: $263.16 on 1 invoice' }).click();
+  await expect(page.getByRole('heading', { name: 'Invoices' })).toBeVisible();
+
   // Verify no console errors occurred
   expect(errors).toEqual([]);
 
@@ -434,4 +455,54 @@ test('tracker: a quote with labor and materials shows its estimated total and ca
   await page.getByRole('link', { name: 'Quotes', exact: true }).click();
   await expect(page.getByRole('row', { name: /Q-\d{4}-001/ })).toContainText('accepted');
   expect(errors).toEqual([]);
+});
+
+test('tracker: Create invoice on an accepted quote carries its summary and materials, labor stays the logged hours', async ({ page }) => {
+  await newJobWithHour(page, 'Panel swap');
+  await page.getByRole('link', { name: 'New quote' }).click();
+  await page.getByLabel('Scope of work').fill('Replace the main panel.\nLabel it.');
+  await page.getByRole('button', { name: '+ Add Materials' }).click();
+  await page.getByPlaceholder('Description').fill('Breakers');
+  await page.locator('input[type="number"][min="1"]').fill('2');
+  await page.getByPlaceholder('0.00').fill('12.50');
+  await page.getByRole('button', { name: 'Save quote' }).click();
+  await expect(page.getByRole('link', { name: 'Create invoice' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mark accepted' }).click();
+  await page.getByRole('link', { name: 'Create invoice' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Create Invoice' })).toBeVisible();
+  await expect(page.getByLabel('One-sentence summary')).toHaveValue('Replace the main panel. Label it.');
+  await expect(page.getByPlaceholder('Description')).toHaveValue('Breakers');
+  await expect(page.getByPlaceholder('0.00')).toHaveValue('12.50');
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+
+  // the logged 1 hr at $100 + $25 materials + 7% tax on the materials
+  await expect(page.locator('.invoice-sheet')).toContainText('Breakers');
+  await expect(page.locator('.invoice-sheet .row.grand')).toContainText('$126.75');
+});
+
+test('tracker: a used invoice number is refused, and an offline twin can be renumbered', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-06-01T10:00:00') });
+  await newJobWithHour(page, 'Gutter clean');
+  await page.getByRole('link', { name: 'Create invoice' }).click();
+  await page.getByLabel('One-sentence summary').fill('Cleaned the gutters.');
+  await page.getByLabel('Invoice number').fill('INV-2026-003'); // issued before the app
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+  await expect(page.getByText('Invoice INV-2026-003 already exists.')).toBeVisible();
+  await page.getByLabel('Invoice number').fill('INV-2026-004');
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+  await expect(page.getByText('Invoice · INV-2026-004')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+
+  // Another device, offline, made its own INV-2026-004; sync brings it in.
+  await page.evaluate(async () => {
+    const { db } = await import('/priced-catalog/src/tracker/db.ts');
+    const { rows } = await db.allDocs({ include_docs: true, startkey: 'invoice:', endkey: 'invoice:￰' });
+    const twin = { ...(rows[0]!.doc as Record<string, unknown>), _id: `invoice:${crypto.randomUUID()}`, _rev: undefined };
+    await db.put(twin as never);
+  });
+  await expect(page.getByRole('alert')).toContainText('Another invoice also has number INV-2026-004');
+  await page.getByRole('button', { name: 'Renumber' }).click();
+  await expect(page.getByText('Invoice · INV-2026-005')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
 });

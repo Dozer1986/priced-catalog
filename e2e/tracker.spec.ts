@@ -482,6 +482,7 @@ test('tracker: Create invoice on an accepted quote carries its summary and mater
 });
 
 test('tracker: a used invoice number is refused, and an offline twin can be renumbered', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-06-01T10:00:00') });
   await newJobWithHour(page, 'Gutter clean');
   await page.getByRole('link', { name: 'Create invoice' }).click();
   await page.getByLabel('One-sentence summary').fill('Cleaned the gutters.');

@@ -125,8 +125,8 @@ export function InvoiceNewScreen({
         id: crypto.randomUUID(),
         kind: 'materials',
         description: found.line.description,
-        qty: found.line.qty,
-        unitPriceStr: (found.line.unitPriceCents / 100).toFixed(2),
+        qty: found.line.unitPriceCents < 0 ? -found.line.qty : found.line.qty,
+        unitPriceStr: (Math.abs(found.line.unitPriceCents) / 100).toFixed(2),
         receiptLine,
       }];
     });

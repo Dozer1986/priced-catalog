@@ -87,6 +87,7 @@ test('receipts: bill a job for its billable receipt lines once', async ({ page }
   await page.route('http://127.0.0.1:8446/extract', (route) =>
     route.fulfill({ status: 503, json: { error: 'Reader unavailable.' }, headers: { 'Access-Control-Allow-Origin': '*' } }),
   );
+  await page.clock.install({ time: new Date('2026-06-01T10:00:00') });
 
   await page.goto('/priced-catalog/tracker.html#/job/new');
   await page.getByLabel('Customer name').fill('Pat Example');
@@ -109,6 +110,10 @@ test('receipts: bill a job for its billable receipt lines once', async ({ page }
   await page.getByLabel('Unit price ($)').nth(1).fill('5.00');
   await page.getByLabel('Tax (%)').nth(1).fill('7');
   await page.getByLabel('Billable').nth(1).selectOption('No');
+  await page.getByRole('button', { name: '+ Add line' }).click();
+  await page.getByLabel('Description').nth(2).fill('Coupon');
+  await page.getByLabel('Unit price ($)').nth(2).fill('-2.00');
+  await page.getByLabel('Tax (%)').nth(2).fill('7');
   await page.getByRole('button', { name: 'Save receipt' }).click();
 
   await page.getByRole('link', { name: 'Jobs', exact: true }).click();
@@ -118,11 +123,12 @@ test('receipts: bill a job for its billable receipt lines once', async ({ page }
   await expect(page.getByText('Copper fittings')).toBeVisible();
   await expect(page.getByText('Shop towels')).toHaveCount(0);
   await page.getByRole('checkbox', { name: 'Include Copper fittings' }).check();
+  await page.getByRole('checkbox', { name: 'Include Coupon' }).check();
   await page.getByLabel('One-sentence summary').fill('Repaired the porch.');
   await page.getByRole('button', { name: 'Save invoice' }).click();
 
   await expect(page.locator('.invoice-sheet')).toContainText('Copper fittings');
-  await expect(page.locator('.invoice-sheet .row.grand')).toContainText('$21.40');
+  await expect(page.locator('.invoice-sheet .row.grand')).toContainText('$19.26');
   await page.getByRole('link', { name: '← Back to job' }).click();
   await page.getByRole('link', { name: 'Create invoice' }).click();
   await expect(page.getByRole('heading', { name: 'From receipts' })).toHaveCount(0);

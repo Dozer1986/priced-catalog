@@ -48,7 +48,7 @@ function parseHash(hash: string): ParsedRoute {
   if (clean.startsWith('/invoice/new')) {
     const search = clean.includes('?') ? clean.slice(clean.indexOf('?')) : '';
     const params = new URLSearchParams(search);
-    return { view: 'invoice-new', jobId: params.get('job') || '' };
+    return { view: 'invoice-new', jobId: params.get('job') || '', quoteId: params.get('quote') || undefined };
   }
   if (clean.startsWith('/invoice/')) {
     const id = clean.slice('/invoice/'.length).split('?')[0];
@@ -134,6 +134,7 @@ export function TrackerApp() {
             entries={entries}
             invoices={invoices}
             settings={settings}
+            quote={quotes.find((q) => q._id === route.quoteId)}
           />
         )}
 

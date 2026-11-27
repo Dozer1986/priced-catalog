@@ -9,6 +9,7 @@ import {
   parseHours,
   PRICE_ERROR,
   quoteTotals,
+  toEditableItems,
   toLineItems,
   type EditableItem,
 } from '../billing';
@@ -68,13 +69,7 @@ export function QuoteNewScreen({ jobId, quoteId, jobs, quotes, settings }: Quote
         ? { number: quote.number, date: quote.date, validUntil: quote.validUntil, summary: quote.summary, notes: quote.notes }
         : { number: nextQuoteNumber(quotes.map((q) => q.number), today), date: today, validUntil: addDays(today, 30), summary: '', notes: '' },
       labor: (quote?.labor ?? []).map((row) => ({ id: crypto.randomUUID(), task: row.task, hoursStr: String(row.hours) })),
-      items: (quote?.items ?? []).map((item) => ({
-        id: crypto.randomUUID(),
-        kind: item.kind,
-        description: item.description,
-        qty: item.qty,
-        unitPriceStr: (item.unitPriceCents / 100).toFixed(2),
-      })),
+      items: toEditableItems(quote?.items ?? []),
     };
   });
   const [form, setForm] = useState<Form>(initial.form);

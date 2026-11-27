@@ -75,6 +75,17 @@ export function toLineItems(items: EditableItem[]): InvoiceLineItem[] {
     }));
 }
 
+/** Saved lines back into form rows, so a saved quote can be edited or billed. */
+export function toEditableItems(items: InvoiceLineItem[]): EditableItem[] {
+  return items.map((item) => ({
+    id: crypto.randomUUID(),
+    kind: item.kind,
+    description: item.description,
+    qty: item.qty,
+    unitPriceStr: (item.unitPriceCents / 100).toFixed(2),
+  }));
+}
+
 /**
  * Calculates invoice financial totals in integer cents.
  * Labor is never taxed.

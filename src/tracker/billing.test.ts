@@ -11,9 +11,23 @@ import {
   formatMoney,
   unpaidCents,
   PRIOR_ISSUED_INVOICE_NUMBERS,
+  toEditableItems,
+  toLineItems,
 } from './billing';
 
 describe('billing pure functions', () => {
+  describe('toEditableItems', () => {
+    it('turns saved lines into form rows that save back unchanged', () => {
+      const items = [
+        { kind: 'materials' as const, description: 'Breakers', qty: 2, unitPriceCents: 1250 },
+        { kind: 'equipment' as const, description: 'Lift', qty: 1, unitPriceCents: 120000 },
+      ];
+      const rows = toEditableItems(items);
+      expect(rows.map((r) => r.unitPriceStr)).toEqual(['12.50', '1200.00']);
+      expect(toLineItems(rows)).toEqual(items);
+    });
+  });
+
   describe('billableHours', () => {
     it('rounds minutes to the nearest 15 minutes as specified', () => {
       expect(billableHours(67)).toBe(1);

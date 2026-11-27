@@ -456,3 +456,27 @@ test('tracker: a quote with labor and materials shows its estimated total and ca
   await expect(page.getByRole('row', { name: /Q-\d{4}-001/ })).toContainText('accepted');
   expect(errors).toEqual([]);
 });
+
+test('tracker: Create invoice on an accepted quote carries its summary and materials, labor stays the logged hours', async ({ page }) => {
+  await newJobWithHour(page, 'Panel swap');
+  await page.getByRole('link', { name: 'New quote' }).click();
+  await page.getByLabel('Scope of work').fill('Replace the main panel.');
+  await page.getByRole('button', { name: '+ Add Materials' }).click();
+  await page.getByPlaceholder('Description').fill('Breakers');
+  await page.locator('input[type="number"][min="1"]').fill('2');
+  await page.getByPlaceholder('0.00').fill('12.50');
+  await page.getByRole('button', { name: 'Save quote' }).click();
+  await expect(page.getByRole('link', { name: 'Create invoice' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Mark accepted' }).click();
+  await page.getByRole('link', { name: 'Create invoice' }).click();
+
+  await expect(page.getByRole('heading', { name: 'Create Invoice' })).toBeVisible();
+  await expect(page.getByLabel('One-sentence summary')).toHaveValue('Replace the main panel.');
+  await expect(page.getByPlaceholder('Description')).toHaveValue('Breakers');
+  await expect(page.getByPlaceholder('0.00')).toHaveValue('12.50');
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+
+  // the logged 1 hr at $100 + $25 materials + 7% tax on the materials
+  await expect(page.locator('.invoice-sheet')).toContainText('Breakers');
+  await expect(page.locator('.invoice-sheet .row.grand')).toContainText('$126.75');
+});

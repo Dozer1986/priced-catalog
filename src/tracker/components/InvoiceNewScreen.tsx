@@ -66,7 +66,7 @@ export function InvoiceNewScreen({
   }, [finishedEntries, today]);
 
   const [completedDate, setCompletedDate] = useState(latestEntryDate);
-  const [summary, setSummary] = useState(quote?.summary ?? '');
+  const [summary, setSummary] = useState(quote?.summary.replace(/\s*\n\s*/g, ' ') ?? ''); // the summary box is one line
   const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
   const saving = useRef(false); // a second tap during the save must not make a second invoice

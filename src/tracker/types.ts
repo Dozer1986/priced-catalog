@@ -68,6 +68,7 @@ export interface InvoiceDoc {
   updatedAt?: string;
   type: 'invoice';
   jobId: string;
+  quoteId?: string;
   number: string; // e.g. 'INV-2026-002'
   date: string; // invoice date 'YYYY-MM-DD'
   completedDate: string; // work completed date 'YYYY-MM-DD'

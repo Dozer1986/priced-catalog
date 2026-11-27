@@ -135,6 +135,7 @@ export function InvoiceNewScreen({
       _id: newInvoiceId,
       type: 'invoice',
       jobId: job._id,
+      ...(quote && { quoteId: quote._id }),
       number: invoiceNumber.trim(),
       date: invoiceDate,
       completedDate,

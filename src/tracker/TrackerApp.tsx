@@ -163,7 +163,7 @@ export function TrackerApp() {
         )}
 
         {route.view === 'quote-detail' && (
-          <QuoteViewScreen quoteId={route.quoteId || ''} quotes={quotes} />
+          <QuoteViewScreen quoteId={route.quoteId || ''} quotes={quotes} invoices={invoices} />
         )}
 
         {route.view === 'quotes' && <QuotesListScreen quotes={quotes} />}

@@ -1,4 +1,4 @@
-import type { QuoteDoc } from '../types';
+import type { InvoiceDoc, QuoteDoc } from '../types';
 import { removeDoc, saveDoc } from '../db';
 import { formatMoney, hoursLabel, quoteTotals } from '../billing';
 import { SheetItemSections, SheetTotals } from './InvoiceParts';
@@ -10,7 +10,7 @@ const STATUSES = [
   ['declined', 'Mark declined'],
 ] as const;
 
-export function QuoteViewScreen({ quoteId, quotes }: { quoteId: string; quotes: QuoteDoc[] }) {
+export function QuoteViewScreen({ quoteId, quotes, invoices }: { quoteId: string; quotes: QuoteDoc[]; invoices: InvoiceDoc[] }) {
   const quote = quotes.find((q) => q._id === quoteId);
 
   if (!quote) {
@@ -25,6 +25,7 @@ export function QuoteViewScreen({ quoteId, quotes }: { quoteId: string; quotes: 
   }
 
   const totals = quoteTotals(quote);
+  const quoteInvoices = invoices.filter((invoice) => invoice.quoteId === quote._id);
   const laborRows = quote.labor.filter((row) => row.hours > 0);
   const setStatus = (status: QuoteDoc['status']) => saveDoc<QuoteDoc>(quote._id, (q) => q && { ...q, status });
 
@@ -68,12 +69,21 @@ export function QuoteViewScreen({ quoteId, quotes }: { quoteId: string; quotes: 
               Edit quote
             </a>
           )}
+          {quoteInvoices.map((invoice) => (
+            <a
+              key={invoice._id}
+              href={`#/invoice/${invoice._id}`}
+              className="text-xs font-semibold text-mark hover:underline"
+            >
+              Invoiced as {invoice.number}
+            </a>
+          ))}
           {quote.status === 'accepted' && (
             <a
               href={`#/invoice/new?job=${quote.jobId}&quote=${quote._id}`}
               className="rounded border border-rule px-3 py-1.5 text-xs font-semibold text-ink-2 hover:border-ink-2"
             >
-              Create invoice
+              {quoteInvoices.length > 0 ? 'Create another invoice' : 'Create invoice'}
             </a>
           )}
           <button

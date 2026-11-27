@@ -479,6 +479,11 @@ test('tracker: Create invoice on an accepted quote carries its summary and mater
   // the logged 1 hr at $100 + $25 materials + 7% tax on the materials
   await expect(page.locator('.invoice-sheet')).toContainText('Breakers');
   await expect(page.locator('.invoice-sheet .row.grand')).toContainText('$126.75');
+
+  await page.goBack();
+  await page.goBack();
+  await expect(page.getByRole('link', { name: /Invoiced as INV-/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Create another invoice' })).toBeVisible();
 });
 
 test('tracker: a used invoice number is refused, and an offline twin can be renumbered', async ({ page }) => {

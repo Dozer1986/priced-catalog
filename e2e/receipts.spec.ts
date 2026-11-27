@@ -123,12 +123,20 @@ test('receipts: bill a job for its billable receipt lines once', async ({ page }
   await expect(page.getByText('Copper fittings')).toBeVisible();
   await expect(page.getByText('Shop towels')).toHaveCount(0);
   await page.getByRole('checkbox', { name: 'Include Copper fittings' }).check();
-  await page.getByRole('checkbox', { name: 'Include Coupon' }).check();
+  // Savings stay with the owner unless he ticks the discount.
+  const coupon = page.getByRole('checkbox', { name: 'Pass savings to customer: Coupon' });
+  await expect(coupon).not.toBeChecked();
+  await expect(page.getByText('Discount: tick to pass the savings to the customer')).toBeVisible();
+  await coupon.check(); // a passed discount bills as qty -1 at $2.00, so the price stays valid
+  await expect(page.locator('input[value="Coupon"]')).toHaveCount(1);
+  await expect(page.locator('input[value="2.00"]')).toHaveCount(1);
+  await coupon.uncheck();
   await page.getByLabel('One-sentence summary').fill('Repaired the porch.');
   await page.getByRole('button', { name: 'Save invoice' }).click();
 
   await expect(page.locator('.invoice-sheet')).toContainText('Copper fittings');
-  await expect(page.locator('.invoice-sheet .row.grand')).toContainText('$19.26');
+  await expect(page.locator('.invoice-sheet')).not.toContainText('Coupon');
+  await expect(page.locator('.invoice-sheet .row.grand')).toContainText('$21.40'); // 2 x $10 + 7% tax, no coupon
   await page.getByRole('link', { name: '← Back to job' }).click();
   await page.getByRole('link', { name: 'Create invoice' }).click();
   await expect(page.getByRole('heading', { name: 'From receipts' })).toHaveCount(0);

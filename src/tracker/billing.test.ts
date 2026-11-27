@@ -89,6 +89,13 @@ describe('billing pure functions', () => {
       expect(unbilledReceiptLines('job:one', [jobReceipt], invoices)).toEqual([]);
       expect(unbilledReceiptLines('job:one', [jobReceipt], []).map((line) => line.receiptLine)).toEqual(['receipt:one#0']);
     });
+
+    it('drops a leftover discount once the receipt has no items left to bill', () => {
+      const coupon = { ...receiptLine(), qty: 1, unitPriceCents: -500 };
+      const withCoupon = receipt('three', 'job:one', [receiptLine(), coupon]);
+      expect(unbilledReceiptLines('job:one', [withCoupon], []).map((line) => line.receiptLine)).toEqual(['receipt:three#0', 'receipt:three#1']);
+      expect(unbilledReceiptLines('job:one', [withCoupon], [invoiceWithReceiptLine('receipt:three#0')])).toEqual([]);
+    });
   });
 
   describe('billableHours', () => {

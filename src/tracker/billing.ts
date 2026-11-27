@@ -103,10 +103,19 @@ export function unbilledReceiptLines(jobId: string, receipts: ReceiptDoc[], invo
   const billed = new Set(invoices.flatMap((invoice) => invoice.items.map((item) => item.receiptLine).filter(Boolean)));
   return receipts
     .filter((receipt) => receipt.jobId === jobId)
-    .flatMap((receipt) => receipt.lines.flatMap((line, lineIndex) => {
-      const receiptLine = `${receipt._id}#${lineIndex}`;
-      return line.billable && !billed.has(receiptLine) ? [{ receipt, line, lineIndex, receiptLine }] : [];
-    }));
+    .flatMap((receipt) => {
+      const open = receipt.lines.flatMap((line, lineIndex) => {
+        const receiptLine = `${receipt._id}#${lineIndex}`;
+        return line.billable && !billed.has(receiptLine) ? [{ receipt, line, lineIndex, receiptLine }] : [];
+      });
+      // A discount left off the invoice stays with the owner; once the receipt's items are all billed, stop offering it.
+      return open.some(({ line }) => !isDiscount(line)) ? open : [];
+    });
+}
+
+/** A coupon, instant rebate or discount line (a return is a negative qty instead). */
+export function isDiscount(line: ReceiptLine): boolean {
+  return line.unitPriceCents < 0;
 }
 
 /**

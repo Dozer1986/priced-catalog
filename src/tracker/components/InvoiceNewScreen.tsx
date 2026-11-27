@@ -13,6 +13,7 @@ import {
   PRIOR_ISSUED_INVOICE_NUMBERS,
   toLineItems,
   unbilledReceiptLines,
+  isDiscount,
   type EditableItem,
 } from '../billing';
 import { ItemsEditor, TotalsPreview } from './InvoiceParts';
@@ -345,6 +346,7 @@ export function InvoiceNewScreen({
             <div className="space-y-2">
               {receiptLines.map(({ receipt, line, receiptLine }) => {
                 const isChecked = lineItems.some((item) => item.receiptLine === receiptLine);
+                const discount = isDiscount(line);
                 return (
                   <label
                     key={receiptLine}
@@ -356,13 +358,16 @@ export function InvoiceNewScreen({
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => toggleReceiptLine(receiptLine)}
-                      aria-label={`Include ${line.description}`}
+                      aria-label={discount ? `Pass savings to customer: ${line.description}` : `Include ${line.description}`}
                       className="h-4 w-4 rounded border-rule text-mark focus:ring-mark"
                     />
                     <span className="min-w-0 flex-1 text-sm text-ink">
                       <span className="fig mr-2 text-xs text-ink-2">{receipt.date}</span>
                       <span className="mr-2 font-medium">{receipt.vendor}</span>
                       <span>{line.description}</span>
+                      {discount && (
+                        <span className="ml-2 text-xs text-ink-2">Discount: tick to pass the savings to the customer</span>
+                      )}
                     </span>
                     <span className="fig shrink-0 text-xs text-ink-2">
                       {line.qty} × {formatMoney(line.unitPriceCents)}

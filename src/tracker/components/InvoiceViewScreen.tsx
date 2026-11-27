@@ -95,7 +95,7 @@ export function InvoiceViewScreen({
       <div className="no-print mx-auto mb-6 flex max-w-[760px] flex-wrap items-center gap-3 px-4 text-sm">
         {invoice.paidDate ? (
           <>
-            <span className="font-semibold text-ink">
+            <span className="font-semibold text-ink-2">
               Paid {invoice.paidDate}{invoice.paidMethod && ` · ${invoice.paidMethod}`}
             </span>
             <button

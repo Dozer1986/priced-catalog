@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { InvoiceDoc, EntryDoc } from '../types';
 import { removeDoc, saveDoc } from '../db';
-import { formatMoney, getLocalDateString, hoursLabel } from '../billing';
+import { formatMoney, getLocalDateString, hoursLabel, nextInvoiceNumber } from '../billing';
 import { SheetItemSections, SheetTotals } from './InvoiceParts';
 import '../invoice.css';
 
@@ -30,6 +30,13 @@ export function InvoiceViewScreen({
       </div>
     );
   }
+
+  // Two devices offline can each give out the same next number.
+  const sharesNumber = invoices.some((inv) => inv._id !== invoice._id && inv.number === invoice.number);
+  const renumber = () => {
+    const number = nextInvoiceNumber(invoices.map((inv) => inv.number), invoice.date);
+    return saveDoc<InvoiceDoc>(invoice._id, (inv) => inv && { ...inv, number });
+  };
 
   // Omit 0-hour labor rows
   const laborRows = invoice.labor.filter((row) => row.hours > 0);
@@ -137,6 +144,20 @@ export function InvoiceViewScreen({
           </>
         )}
       </div>
+      {sharesNumber && (
+        <div role="alert" className="no-print mx-auto mb-6 max-w-[760px] px-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-red-500/50 p-3 text-sm text-red-400">
+            <span>Another invoice also has number {invoice.number}. If you haven't sent this one, give it a new number.</span>
+            <button
+              type="button"
+              onClick={renumber}
+              className="rounded border border-red-500/50 px-3 py-1.5 text-xs font-semibold hover:bg-red-950/20"
+            >
+              Renumber
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Invoice Sheet */}
       <div className="invoice-sheet">

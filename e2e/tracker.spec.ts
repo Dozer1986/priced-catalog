@@ -480,3 +480,28 @@ test('tracker: Create invoice on an accepted quote carries its summary and mater
   await expect(page.locator('.invoice-sheet')).toContainText('Breakers');
   await expect(page.locator('.invoice-sheet .row.grand')).toContainText('$126.75');
 });
+
+test('tracker: a used invoice number is refused, and an offline twin can be renumbered', async ({ page }) => {
+  await newJobWithHour(page, 'Gutter clean');
+  await page.getByRole('link', { name: 'Create invoice' }).click();
+  await page.getByLabel('One-sentence summary').fill('Cleaned the gutters.');
+  await page.getByLabel('Invoice number').fill('INV-2026-003'); // issued before the app
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+  await expect(page.getByText('Invoice INV-2026-003 already exists.')).toBeVisible();
+  await page.getByLabel('Invoice number').fill('INV-2026-004');
+  await page.getByRole('button', { name: 'Save invoice' }).click();
+  await expect(page.getByText('Invoice · INV-2026-004')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+
+  // Another device, offline, made its own INV-2026-004; sync brings it in.
+  await page.evaluate(async () => {
+    const { db } = await import('/priced-catalog/src/tracker/db.ts');
+    const { rows } = await db.allDocs({ include_docs: true, startkey: 'invoice:', endkey: 'invoice:￰' });
+    const twin = { ...(rows[0]!.doc as Record<string, unknown>), _id: `invoice:${crypto.randomUUID()}`, _rev: undefined };
+    await db.put(twin as never);
+  });
+  await expect(page.getByRole('alert')).toContainText('Another invoice also has number INV-2026-004');
+  await page.getByRole('button', { name: 'Renumber' }).click();
+  await expect(page.getByText('Invoice · INV-2026-005')).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);
+});

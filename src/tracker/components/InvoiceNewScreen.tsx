@@ -10,6 +10,7 @@ import {
   hasBadPrice,
   PRICE_ERROR,
   toEditableItems,
+  PRIOR_ISSUED_INVOICE_NUMBERS,
   toLineItems,
   type EditableItem,
 } from '../billing';
@@ -110,6 +111,10 @@ export function InvoiceNewScreen({
     e.preventDefault();
     if (!invoiceNumber.trim()) {
       setError('Invoice number is required.');
+      return;
+    }
+    if ([...PRIOR_ISSUED_INVOICE_NUMBERS, ...existingNumbers].includes(invoiceNumber.trim())) {
+      setError(`Invoice ${invoiceNumber.trim()} already exists. Use another number.`);
       return;
     }
     if (!summary.trim()) {

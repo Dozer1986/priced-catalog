@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { InvoiceTotals } from './types';
+import type { InvoiceDoc, InvoiceTotals, ReceiptDoc, ReceiptLine } from './types';
 import {
   billableHours,
   parseHours,
@@ -13,7 +13,42 @@ import {
   PRIOR_ISSUED_INVOICE_NUMBERS,
   toEditableItems,
   toLineItems,
+  unbilledReceiptLines,
 } from './billing';
+
+const receiptLine = (billable = true): ReceiptLine => ({
+  item: 'SCREWS',
+  description: 'Screws',
+  sku: '',
+  qty: 2,
+  unitPriceCents: 1250,
+  taxRate: 0.07,
+  category: '',
+  project: '',
+  billable,
+});
+
+const receipt = (id: string, jobId: string, lines: ReceiptLine[]): ReceiptDoc => ({
+  _id: `receipt:${id}`,
+  type: 'receipt',
+  status: 'confirmed',
+  jobId,
+  date: '2026-06-01',
+  vendor: 'Menards',
+  storeCity: '',
+  storeState: '',
+  paidWith: '',
+  subtotalCents: null,
+  taxCents: null,
+  totalCents: null,
+  notes: '',
+  lines,
+  createdAt: '2026-06-01T10:00:00.000Z',
+});
+
+const invoiceWithReceiptLine = (receiptLineRef: string): InvoiceDoc => ({
+  items: [{ kind: 'materials', description: 'Screws', qty: 2, unitPriceCents: 1250, receiptLine: receiptLineRef }],
+} as InvoiceDoc);
 
 describe('billing pure functions', () => {
   describe('toEditableItems', () => {
@@ -25,6 +60,41 @@ describe('billing pure functions', () => {
       const rows = toEditableItems(items);
       expect(rows.map((r) => r.unitPriceStr)).toEqual(['12.50', '1200.00']);
       expect(toLineItems(rows)).toEqual(items);
+    });
+
+    it('keeps a receipt line reference through form conversion', () => {
+      const items = [{ kind: 'materials' as const, description: 'Screws', qty: 2, unitPriceCents: 1250, receiptLine: 'receipt:abc#0' }];
+      expect(toLineItems(toEditableItems(items))).toEqual(items);
+    });
+  });
+
+  describe('unbilledReceiptLines', () => {
+    const jobReceipt = receipt('one', 'job:one', [receiptLine(), receiptLine(false)]);
+    const otherJobReceipt = receipt('two', 'job:two', [receiptLine()]);
+
+    it('returns billable lines for the selected job', () => {
+      expect(unbilledReceiptLines('job:one', [jobReceipt], []).map((line) => line.receiptLine)).toEqual(['receipt:one#0']);
+    });
+
+    it('ignores receipts assigned to another job', () => {
+      expect(unbilledReceiptLines('job:one', [otherJobReceipt], [])).toEqual([]);
+    });
+
+    it('excludes a line referenced by an invoice', () => {
+      expect(unbilledReceiptLines('job:one', [jobReceipt], [invoiceWithReceiptLine('receipt:one#0')])).toEqual([]);
+    });
+
+    it('offers the line again after the invoice is gone', () => {
+      const invoices = [invoiceWithReceiptLine('receipt:one#0')];
+      expect(unbilledReceiptLines('job:one', [jobReceipt], invoices)).toEqual([]);
+      expect(unbilledReceiptLines('job:one', [jobReceipt], []).map((line) => line.receiptLine)).toEqual(['receipt:one#0']);
+    });
+
+    it('drops a leftover discount once the receipt has no items left to bill', () => {
+      const coupon = { ...receiptLine(), qty: 1, unitPriceCents: -500 };
+      const withCoupon = receipt('three', 'job:one', [receiptLine(), coupon]);
+      expect(unbilledReceiptLines('job:one', [withCoupon], []).map((line) => line.receiptLine)).toEqual(['receipt:three#0', 'receipt:three#1']);
+      expect(unbilledReceiptLines('job:one', [withCoupon], [invoiceWithReceiptLine('receipt:three#0')])).toEqual([]);
     });
   });
 

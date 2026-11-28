@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ListsDoc, ReceiptDoc } from '../types';
+import type { JobDoc, ListsDoc, ReceiptDoc } from '../types';
 import { saveDoc } from '../db';
 import { formatMoney } from '../billing';
 import { prepareFile, extractReceipt } from '../reader';
@@ -17,6 +17,7 @@ import {
 interface ReceiptScreenProps {
   receiptId?: string; // none: a new receipt
   receipts: ReceiptDoc[];
+  jobs: JobDoc[];
   lists?: ListsDoc;
 }
 
@@ -117,11 +118,13 @@ function Choice(props: { id: string; value: string; options?: string[]; onChange
   );
 }
 
-export function ReceiptScreen({ receiptId, receipts, lists }: ReceiptScreenProps) {
+export function ReceiptScreen({ receiptId, receipts, jobs, lists }: ReceiptScreenProps) {
   const receipt = receiptId ? receipts.find((r) => r._id === receiptId) : undefined;
   // What the form started from; a save writes only the fields that differ from it
   const [saved, setSaved] = useState<ReceiptFields | null>(() => (receipt ? (fromDraft(toDraft(receipt)) as ReceiptFields) : null));
   const [draft, setDraft] = useState<Draft | null>(() => (saved ? toDraft(saved) : null));
+  const [savedJobId, setSavedJobId] = useState(receipt?.jobId ?? '');
+  const [jobId, setJobId] = useState(receipt?.jobId ?? '');
   // One id per new receipt, so a second tap on Save rewrites it instead of making a duplicate
   const [newId] = useState(() => `receipt:${crypto.randomUUID()}` as const);
   const [file, setFile] = useState<{ blob: Blob; ext: string } | null>(null);
@@ -167,6 +170,7 @@ export function ReceiptScreen({ receiptId, receipts, lists }: ReceiptScreenProps
         status: 'confirmed',
         createdAt: new Date().toISOString(),
         ...fields,
+        ...(jobId && { jobId }),
         _attachments: { [`original.${file.ext}`]: { content_type: file.blob.type, data: file.blob } },
       };
       await saveDoc(doc._id, () => doc);
@@ -174,16 +178,28 @@ export function ReceiptScreen({ receiptId, receipts, lists }: ReceiptScreenProps
       return;
     }
     const changes = changedFields(saved!, fields);
+    const jobChange = jobId === savedJobId ? {} : { jobId: jobId || undefined };
     let imported = false;
     await saveDoc<ReceiptDoc>(receipt._id, (cur) => {
       imported = !!cur?.importedAt;
-      return cur && !imported ? { ...cur, ...changes } : undefined;
+      return cur && !imported ? { ...cur, ...changes, ...jobChange } : undefined;
     });
     if (imported) {
       setError('This receipt went into the ledger meanwhile, so the edit was not saved. Change it in the ledger.');
       return;
     }
     setSaved(fields);
+    setSavedJobId(jobId);
+    setNotice('Saved.');
+  };
+
+  const handleJobChange = async (nextJobId: string) => {
+    setJobId(nextJobId);
+    setNotice('');
+    if (!readOnly || !receipt) return;
+    const jobId = nextJobId || undefined;
+    await saveDoc<ReceiptDoc>(receipt._id, (r) => r && { ...r, jobId });
+    setSavedJobId(nextJobId);
     setNotice('Saved.');
   };
 
@@ -270,6 +286,15 @@ export function ReceiptScreen({ receiptId, receipts, lists }: ReceiptScreenProps
       {error && <div className="mb-4 rounded border border-red-500/50 bg-red-950/20 p-3 text-sm text-red-200">{error}</div>}
 
       <form onSubmit={handleSave}>
+        <div className="mb-4">
+          <label htmlFor="r-job" className="block text-sm font-medium text-ink">Job</label>
+          <select id="r-job" value={jobId} onChange={(e) => void handleJobChange(e.target.value)} className={inputClass}>
+            <option value="">—</option>
+            {jobs.filter((job) => job.status === 'open' || job._id === jobId).map((job) => (
+              <option key={job._id} value={job._id}>{job.customer} - {job.name}</option>
+            ))}
+          </select>
+        </div>
         <fieldset disabled={readOnly} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>

@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
-import type { JobDoc, EntryDoc, SettingsDoc, InvoiceDoc, QuoteDoc } from '../types';
+import type { JobDoc, EntryDoc, SettingsDoc, InvoiceDoc, QuoteDoc, ReceiptDoc } from '../types';
 import { saveDoc } from '../db';
 import {
   billableHours,
@@ -12,6 +12,8 @@ import {
   toEditableItems,
   PRIOR_ISSUED_INVOICE_NUMBERS,
   toLineItems,
+  unbilledReceiptLines,
+  isDiscount,
   type EditableItem,
 } from '../billing';
 import { ItemsEditor, TotalsPreview } from './InvoiceParts';
@@ -21,6 +23,7 @@ interface InvoiceNewScreenProps {
   jobs: JobDoc[];
   entries: EntryDoc[];
   invoices: InvoiceDoc[];
+  receipts: ReceiptDoc[];
   settings: SettingsDoc;
   quote?: QuoteDoc; // an accepted quote whose summary and lines prefill the form
 }
@@ -30,6 +33,7 @@ export function InvoiceNewScreen({
   jobs,
   entries,
   invoices,
+  receipts,
   settings,
   quote,
 }: InvoiceNewScreenProps) {
@@ -50,6 +54,10 @@ export function InvoiceNewScreen({
 
   // Equipment & Materials lines
   const [lineItems, setLineItems] = useState<EditableItem[]>(() => toEditableItems(quote?.items ?? []));
+  const receiptLines = useMemo(
+    () => unbilledReceiptLines(jobId, receipts, invoices),
+    [jobId, receipts, invoices]
+  );
 
   // Invoice Number
   const existingNumbers = invoices.map((i) => i.number);
@@ -107,6 +115,24 @@ export function InvoiceNewScreen({
     setSelectedEntryIds(next);
   };
 
+  const toggleReceiptLine = (receiptLine: string) => {
+    setLineItems((items) => {
+      if (items.some((item) => item.receiptLine === receiptLine)) {
+        return items.filter((item) => item.receiptLine !== receiptLine);
+      }
+      const found = receiptLines.find((candidate) => candidate.receiptLine === receiptLine);
+      if (!found) return items;
+      return [...items, {
+        id: crypto.randomUUID(),
+        kind: 'materials',
+        description: found.line.description,
+        qty: found.line.unitPriceCents < 0 ? -found.line.qty : found.line.qty,
+        unitPriceStr: (Math.abs(found.line.unitPriceCents) / 100).toFixed(2),
+        receiptLine,
+      }];
+    });
+  };
+
   const handleSaveInvoice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!invoiceNumber.trim()) {
@@ -135,6 +161,7 @@ export function InvoiceNewScreen({
       _id: newInvoiceId,
       type: 'invoice',
       jobId: job._id,
+      ...(quote && { quoteId: quote._id }),
       number: invoiceNumber.trim(),
       date: invoiceDate,
       completedDate,
@@ -312,6 +339,45 @@ export function InvoiceNewScreen({
             </div>
           )}
         </div>
+
+        {receiptLines.length > 0 && (
+          <div className="rounded border border-rule bg-field p-4">
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wider text-ink">From receipts</h3>
+            <div className="space-y-2">
+              {receiptLines.map(({ receipt, line, receiptLine }) => {
+                const isChecked = lineItems.some((item) => item.receiptLine === receiptLine);
+                const discount = isDiscount(line);
+                return (
+                  <label
+                    key={receiptLine}
+                    className={`flex cursor-pointer items-center gap-3 rounded border p-2.5 transition-colors ${
+                      isChecked ? 'border-mark/60 bg-paper' : 'border-rule/50 bg-paper/40'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleReceiptLine(receiptLine)}
+                      aria-label={discount ? `Pass savings to customer: ${line.description}` : `Include ${line.description}`}
+                      className="h-4 w-4 rounded border-rule text-mark focus:ring-mark"
+                    />
+                    <span className="min-w-0 flex-1 text-sm text-ink">
+                      <span className="fig mr-2 text-xs text-ink-2">{receipt.date}</span>
+                      <span className="mr-2 font-medium">{receipt.vendor}</span>
+                      <span>{line.description}</span>
+                      {discount && (
+                        <span className="ml-2 text-xs text-ink-2">Discount: tick to pass the savings to the customer</span>
+                      )}
+                    </span>
+                    <span className="fig shrink-0 text-xs text-ink-2">
+                      {line.qty} × {formatMoney(line.unitPriceCents)}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <ItemsEditor items={lineItems} setItems={setLineItems} />
 

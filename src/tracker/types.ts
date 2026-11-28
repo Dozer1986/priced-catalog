@@ -50,6 +50,7 @@ export interface InvoiceLineItem {
   description: string;
   qty: number;
   unitPriceCents: number;
+  receiptLine?: string; // `${receiptId}#${lineIndex}`
 }
 
 export interface InvoiceTotals {
@@ -68,6 +69,7 @@ export interface InvoiceDoc {
   updatedAt?: string;
   type: 'invoice';
   jobId: string;
+  quoteId?: string;
   number: string; // e.g. 'INV-2026-002'
   date: string; // invoice date 'YYYY-MM-DD'
   completedDate: string; // work completed date 'YYYY-MM-DD'
@@ -130,6 +132,7 @@ export interface ReceiptDoc {
   updatedAt?: string;
   type: 'receipt';
   status: 'confirmed';
+  jobId?: string;
   date: string; // 'YYYY-MM-DD'
   vendor: string;
   storeCity: string;
